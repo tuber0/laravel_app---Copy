@@ -2,6 +2,9 @@ FROM richarvey/nginx-php-fpm:latest
 
 COPY . .
 
+# Copy custom Nginx configuration for Laravel pretty URLs
+COPY conf/nginx/nginx-site.conf /etc/nginx/sites-available/default.conf
+
 # Image configuration
 ENV SKIP_COMPOSER 1
 ENV WEBROOT /var/www/html/public
