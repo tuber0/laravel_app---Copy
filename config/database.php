@@ -59,7 +59,23 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') ?: (file_exists(database_path('certs/ca.pem')) ? database_path('certs/ca.pem') : null),
+                PDO::MYSQL_ATTR_SSL_CA => (function () {
+                    $sslCa = env('MYSQL_ATTR_SSL_CA');
+                    if (!empty($sslCa)) {
+                        if (str_contains($sslCa, 'BEGIN CERTIFICATE')) {
+                            $caPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'aiven_ca.pem';
+                            if (!file_exists($caPath) || file_get_contents($caPath) !== $sslCa) {
+                                @file_put_contents($caPath, $sslCa);
+                            }
+                            return $caPath;
+                        }
+                        if (file_exists($sslCa)) {
+                            return $sslCa;
+                        }
+                    }
+                    $repoCa = database_path('certs/ca.pem');
+                    return file_exists($repoCa) ? $repoCa : null;
+                })(),
             ]) : [],
         ],
 
