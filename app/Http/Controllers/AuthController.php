@@ -42,7 +42,12 @@ class AuthController extends Controller
             'role' => 'customer', // Always customer for public registration
         ]);
 
-        event(new Registered($user));
+        try {
+            event(new Registered($user));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Registration email could not be sent: ' . $e->getMessage());
+        }
+
         Auth::login($user);
 
         return redirect()->route('customer.home')->with('success', 'Account created successfully! Welcome to Pedro\'s Artisan Shop.');
