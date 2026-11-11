@@ -125,8 +125,9 @@ $displayCategories = $categories->count() > 0 ? $categories : collect(['Barberin
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-gold flex-fill py-2 fw-bold" 
-                                onclick="openEditModal({{ $s }})">EDIT</button>
+                        <button type="button" class="btn btn-sm btn-outline-gold flex-fill py-2 fw-bold" 
+                                data-service="{{ htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') }}"
+                                onclick="openEditModal(JSON.parse(this.getAttribute('data-service')))">EDIT</button>
                         <form action="{{ route('admin.services.destroy', $s->id) }}" method="POST" class="flex-fill" onsubmit="return confirm('Delete this service permanently?')">
                             @csrf
                             @method('DELETE')

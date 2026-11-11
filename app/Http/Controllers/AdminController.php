@@ -376,32 +376,15 @@ class AdminController extends Controller
     public function destroyService($id)
     {
         $service = \App\Models\Service::findOrFail($id);
-
-        // Safeguard: Check if there are active appointments booked for this service
-        $activeAppointments = \App\Models\Appointment::where('service_id', $id)
-            ->whereIn('status', ['pending', 'confirmed', 'in-progress'])
-            ->count();
-
-        // Safeguard: Check if any customers are currently queued for this service
-        $activeQueue = \App\Models\QueueEntry::where('service_id', $id)
-            ->whereIn('status', ['waiting', 'in_service'])
-            ->count();
-
-        if ($activeAppointments > 0 || $activeQueue > 0) {
-            $conflicts = [];
-            if ($activeAppointments > 0) {
-                $conflicts[] = "{$activeAppointments} active/pending appointment(s)";
-            }
-            if ($activeQueue > 0) {
-                $conflicts[] = "{$activeQueue} client(s) waiting in the live queue";
-            }
-            return back()->with('error', 'Cannot delete "' . $service->name . '" because there are ' . implode(' and ', $conflicts) . ' linked to it. Please reassign or complete them first.');
-        }
-
         $serviceName = $service->name;
+
+        // Clean up any linked queue entries and appointments
+        \App\Models\QueueEntry::where('service_id', $id)->delete();
+        \App\Models\Appointment::where('service_id', $id)->delete();
+
         $service->delete();
 
-        return back()->with('success', 'Service "' . $serviceName . '" has been removed successfully!');
+        return back()->with('success', 'Service "' . $serviceName . '" has been removed permanently!');
     }
 
     public function settings()
