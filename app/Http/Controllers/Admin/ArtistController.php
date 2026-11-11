@@ -13,14 +13,26 @@ class ArtistController extends Controller
 {
     public function index()
     {
-        $artists = Artist::with('user')->latest()->paginate(10);
-        $categories = Service::distinct()->pluck('category')->filter()->values();
+        // Auto-cleanup any orphan artists whose personnel user account no longer exists
+        $orphans = Artist::whereNull('user_id')->orWhereDoesntHave('user')->get();
+        foreach ($orphans as $orphan) {
+            \App\Models\PortfolioItem::where('artist_id', $orphan->id)->delete();
+            \App\Models\Review::where('artist_id', $orphan->id)->delete();
+            \App\Models\ScheduleRequest::where('artist_id', $orphan->id)->delete();
+            \App\Models\QueueEntry::where('artist_id', $orphan->id)->delete();
+            \App\Models\Appointment::where('artist_id', $orphan->id)->delete();
+            $orphan->delete();
+        }
+
+        $artists = Artist::with('user')->whereHas('user')->latest()->paginate(10);
+        $categories = Service::getAllCategories();
         return view('admin.artists.index', compact('artists', 'categories'));
     }
 
     public function create()
     {
-        return view('admin.artists.create');
+        $categories = Service::getAllCategories();
+        return view('admin.artists.create', compact('categories'));
     }
 
     public function store(Request $request)
@@ -77,8 +89,22 @@ class ArtistController extends Controller
             'facebook' => $request->input('social_facebook', ''),
         ];
 
+        // Synchronize with Personnel (User) database
+        $user = \App\Models\User::where('email', $validated['email'])->first();
+        if (!$user) {
+            $user = \App\Models\User::create([
+                'name'              => $validated['name'],
+                'email'             => $validated['email'],
+                'phone'             => $validated['phone'] ?? null,
+                'role'              => 'staff',
+                'password'          => bcrypt('StaffPassword123!'),
+                'email_verified_at' => now(),
+            ]);
+        }
+        $validated['user_id'] = $user->id;
+
         Artist::create($validated);
-        return redirect()->route('admin.artists.index')->with('success', 'Artist profile created successfully.');
+        return redirect()->route('admin.artists.index')->with('success', 'Artist profile and connected personnel account created successfully.');
     }
 
     public function show($id)
@@ -90,7 +116,8 @@ class ArtistController extends Controller
     public function edit($id)
     {
         $artist = Artist::with('portfolioItems')->findOrFail($id);
-        return view('admin.artists.edit', compact('artist'));
+        $categories = Service::getAllCategories();
+        return view('admin.artists.edit', compact('artist', 'categories'));
     }
 
     public function update(Request $request, $id)
@@ -156,12 +183,52 @@ class ArtistController extends Controller
         ];
 
         $artist->update($validated);
+
+        // Keep connected User record in sync
+        if ($artist->user_id) {
+            $user = \App\Models\User::find($artist->user_id);
+            if ($user) {
+                $user->update([
+                    'name'  => $validated['name'],
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'] ?? $user->phone,
+                ]);
+            }
+        } elseif ($artist->email) {
+            $user = \App\Models\User::where('email', $artist->email)->first();
+            if ($user) {
+                $artist->update(['user_id' => $user->id]);
+                $user->update([
+                    'name'  => $validated['name'],
+                    'email' => $validated['email'],
+                ]);
+            }
+        }
+
         return redirect()->route('admin.artists.index')->with('success', 'Artist profile updated successfully.');
     }
 
     public function destroy($id)
     {
-        Artist::destroy($id);
-        return redirect()->route('admin.artists.index')->with('success', 'Artist profile deleted.');
+        $artist = Artist::findOrFail($id);
+        $userId = $artist->user_id;
+        $artistEmail = $artist->email;
+
+        // Cascade cleanup
+        \App\Models\PortfolioItem::where('artist_id', $artist->id)->delete();
+        \App\Models\Review::where('artist_id', $artist->id)->delete();
+        \App\Models\ScheduleRequest::where('artist_id', $artist->id)->delete();
+        \App\Models\QueueEntry::where('artist_id', $artist->id)->delete();
+        \App\Models\Appointment::where('artist_id', $artist->id)->delete();
+        $artist->delete();
+
+        // Delete connected staff account in personnel database
+        if ($userId) {
+            \App\Models\User::where('id', $userId)->where('role', 'staff')->delete();
+        } elseif ($artistEmail) {
+            \App\Models\User::where('email', $artistEmail)->where('role', 'staff')->delete();
+        }
+
+        return redirect()->route('admin.artists.index')->with('success', 'Artist profile and connected personnel account deleted successfully.');
     }
 }

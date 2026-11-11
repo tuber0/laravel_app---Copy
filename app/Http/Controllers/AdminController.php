@@ -83,8 +83,8 @@ class AdminController extends Controller
             ->get();
 
         $services_list = \App\Models\Service::orderBy('category')->orderBy('name')->get();
-        // Extract unique categories or default to 'All'
-        $categories = $services_list->pluck('category')->unique()->sort()->values();
+        // Master list of all categories (core standards + any added custom categories)
+        $categories = \App\Models\Service::getAllCategories();
         $categories->prepend('All');
 
         $artists = \App\Models\Artist::orderBy('name')->get();
@@ -94,7 +94,7 @@ class AdminController extends Controller
 
     public function createStaff()
     {
-        $categories = \App\Models\Service::distinct()->pluck('category')->filter()->values();
+        $categories = \App\Models\Service::getAllCategories();
         return view('admin.staff-create', compact('categories'));
     }
 
@@ -232,8 +232,22 @@ class AdminController extends Controller
             return back()->with('error', 'You cannot delete your own administrative account.');
         }
 
+        // Delete connected artist profiles (by user_id or matching email)
+        $artists = \App\Models\Artist::where('user_id', $personnel->id)
+            ->orWhere('email', $personnel->email)
+            ->get();
+
+        foreach ($artists as $artist) {
+            \App\Models\PortfolioItem::where('artist_id', $artist->id)->delete();
+            \App\Models\Review::where('artist_id', $artist->id)->delete();
+            \App\Models\ScheduleRequest::where('artist_id', $artist->id)->delete();
+            \App\Models\QueueEntry::where('artist_id', $artist->id)->delete();
+            \App\Models\Appointment::where('artist_id', $artist->id)->delete();
+            $artist->delete();
+        }
+
         $personnel->delete();
-        return back()->with('success', 'Personnel account has been removed successfully.');
+        return back()->with('success', 'Personnel account and connected artist profile have been removed successfully.');
     }
 
     public function updateStaffPassword(Request $request, $id)
@@ -337,13 +351,18 @@ class AdminController extends Controller
     public function services()
     {
         $services = \App\Models\Service::orderBy('category')->orderBy('name')->get();
-        // Get unique categories for filtering
-        $categories = $services->pluck('category')->unique()->sort()->values();
+        // Master list of all categories (core standards + any added custom categories)
+        $categories = \App\Models\Service::getAllCategories();
         return view('admin.services', compact('services', 'categories'));
     }
 
     public function storeService(Request $request)
     {
+        $category = $request->input('category');
+        if ($category === '__custom__' && $request->filled('new_category')) {
+            $request->merge(['category' => trim($request->input('new_category'))]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',
@@ -359,6 +378,11 @@ class AdminController extends Controller
 
     public function updateService(Request $request, $id)
     {
+        $category = $request->input('category');
+        if ($category === '__custom__' && $request->filled('new_category')) {
+            $request->merge(['category' => trim($request->input('new_category'))]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',

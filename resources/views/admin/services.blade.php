@@ -66,12 +66,17 @@ $displayCategories = $categories->count() > 0 ? $categories : collect(['Barberin
                 </div>
                 <div class="col-md-6">
                     <label class="form-label small fw-bold text-muted-foreground">Category</label>
-                    <select name="category" class="form-select" required>
+                    <select name="category" id="add_category_select" class="form-select" onchange="toggleNewCategoryInput(this.value, 'add_new_category_group', 'add_new_category_input')" required>
                         <option value="" disabled selected>Select category...</option>
                         @foreach($displayCategories as $cat)
                             <option value="{{ $cat }}">{{ $cat }}</option>
                         @endforeach
+                        <option value="__custom__" class="fw-bold text-warning">+ Add New Category...</option>
                     </select>
+                </div>
+                <div class="col-md-6" id="add_new_category_group" style="display: none;">
+                    <label class="form-label small fw-bold text-warning">New Category Name</label>
+                    <input type="text" name="new_category" id="add_new_category_input" class="form-control" placeholder="e.g. Nails, Spa, Massage">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-bold text-muted-foreground">Price (₱)</label>
@@ -168,11 +173,16 @@ $displayCategories = $categories->count() > 0 ? $categories : collect(['Barberin
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted-foreground">Category</label>
-                            <select name="category" id="edit_category" class="form-select" required>
+                            <select name="category" id="edit_category" class="form-select" onchange="toggleNewCategoryInput(this.value, 'edit_new_category_group', 'edit_new_category_input')" required>
                                 @foreach($displayCategories as $cat)
                                     <option value="{{ $cat }}">{{ $cat }}</option>
                                 @endforeach
+                                <option value="__custom__" class="fw-bold text-warning">+ Add New Category...</option>
                             </select>
+                        </div>
+                        <div class="col-md-6" id="edit_new_category_group" style="display: none;">
+                            <label class="form-label small fw-bold text-warning">New Category Name</label>
+                            <input type="text" name="new_category" id="edit_new_category_input" class="form-control" placeholder="e.g. Nails, Spa, Massage">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted-foreground">Price (₱)</label>
@@ -206,12 +216,46 @@ $displayCategories = $categories->count() > 0 ? $categories : collect(['Barberin
 </style>
 
 <script>
+function toggleNewCategoryInput(selectedVal, groupId, inputId) {
+    const group = document.getElementById(groupId);
+    const input = document.getElementById(inputId);
+    if (!group || !input) return;
+    
+    if (selectedVal === '__custom__') {
+        group.style.display = 'block';
+        input.required = true;
+        input.focus();
+    } else {
+        group.style.display = 'none';
+        input.required = false;
+        input.value = '';
+    }
+}
+
 function openEditModal(service) {
     const form = document.getElementById('editServiceForm');
     form.action = `/admin/services/${service.id}`;
     
     document.getElementById('edit_name').value = service.name;
-    document.getElementById('edit_category').value = service.category;
+    
+    const catSelect = document.getElementById('edit_category');
+    let optionFound = false;
+    for (let i = 0; i < catSelect.options.length; i++) {
+        if (catSelect.options[i].value === service.category) {
+            optionFound = true;
+            break;
+        }
+    }
+    if (!optionFound && service.category) {
+        const newOpt = document.createElement('option');
+        newOpt.value = service.category;
+        newOpt.textContent = service.category;
+        // Insert before custom option
+        catSelect.insertBefore(newOpt, catSelect.lastElementChild);
+    }
+    catSelect.value = service.category;
+    toggleNewCategoryInput(service.category, 'edit_new_category_group', 'edit_new_category_input');
+
     document.getElementById('edit_price').value = service.price;
     document.getElementById('edit_duration').value = service.duration;
     document.getElementById('edit_description').value = service.description || '';

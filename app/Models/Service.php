@@ -28,5 +28,13 @@ class Service extends Model
         }
         return 30; // default 30 mins
     }
+
+    public static function getAllCategories(): \Illuminate\Support\Collection
+    {
+        $standards = collect(['Barbering', 'Hair Styling', 'Braiding', 'Tattoo', 'Piercing', 'Others']);
+        $serviceCats = static::pluck('category')->filter()->map('trim');
+        $artistCats = \App\Models\Artist::pluck('category')->filter()->map('trim');
+        return $standards->merge($serviceCats)->merge($artistCats)->unique()->filter()->sort()->values();
+    }
 }
 

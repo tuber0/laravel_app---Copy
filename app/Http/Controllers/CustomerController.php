@@ -212,7 +212,7 @@ class CustomerController extends Controller
             $query->where('category', $category);
         })->get();
 
-        $categories = Artist::distinct()->pluck('category');
+        $categories = \App\Models\Service::getAllCategories();
 
         return view('customer.artists', compact('artists', 'categories', 'category'));
     }
@@ -226,7 +226,7 @@ class CustomerController extends Controller
     public function services()
     {
         $services = \App\Models\Service::all();
-        $categories = \App\Models\Service::distinct()->pluck('category');
+        $categories = \App\Models\Service::getAllCategories();
         return view('customer.services', compact('services', 'categories'));
     }
 
