@@ -30,6 +30,22 @@ $displayCategories = $categories->count() > 0 ? $categories : collect(['Barberin
     </div>
     @endif
 
+    @if(session('error'))
+    <div class="alert alert-danger bg-dark-subtle border-danger text-danger mb-4 rounded-4 small fw-bold animate-fade-in shadow-sm">
+        {{ session('error') }}
+    </div>
+    @endif
+
+    @if($errors->any())
+    <div class="alert alert-danger bg-dark-subtle border-danger text-danger mb-4 rounded-4 small fw-bold animate-fade-in shadow-sm">
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     <!-- Category Filter Bar -->
     <div class="d-flex gap-2 overflow-auto pb-3 mb-5 no-scrollbar">
         <a href="{{ route('admin.services.index') }}" class="day-btn {{ $cat_filter === 'All' ? 'active' : '' }}">ALL SERVICES</a>
