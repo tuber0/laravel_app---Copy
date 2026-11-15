@@ -368,7 +368,7 @@ class CustomerController extends Controller
         $validated = $request->validate([
             'artist_id'      => 'required|exists:artists,id',
             'appointment_id' => 'nullable|exists:appointments,id',
-            'rating'         => 'required|numeric|min:1|max:5',
+            'rating'         => 'required|numeric|min:0.5|max:5',
             'comment'        => 'nullable|string|max:1000',
         ]);
 

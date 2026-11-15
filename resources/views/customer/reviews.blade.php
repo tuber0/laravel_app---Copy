@@ -142,22 +142,44 @@ function render_rating_stars($rating) {
                     </select>
                 </div>
 
-                <!-- Star Rating Picker -->
+                <!-- Star Rating Picker (Full & Half Stars) -->
                 <div class="mb-4 text-center p-4 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
-                    <label class="form-label small fw-bold text-uppercase text-muted-foreground d-block mb-2">Overall Rating <span class="text-danger">*</span></label>
-                    <div class="d-inline-flex gap-2 justify-content-center align-items-center mb-2" id="starPickerContainer" onmouseleave="resetStarHover()">
-                        @for($i = 1; $i <= 5; $i++)
-                        <button type="button" class="star-btn" id="star_btn_{{ $i }}" 
-                                onclick="setRating({{ $i }})" 
-                                onmouseenter="hoverRating({{ $i }})" 
-                                aria-label="{{ $i }} Stars"
-                                style="background: none; border: none; cursor: pointer; font-size: 2.5rem; line-height: 1; color: var(--primary); padding: 0 4px; transition: transform 0.15s ease, color 0.15s ease;">
-                            ★
-                        </button>
-                        @endfor
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground d-block mb-3">Overall Rating <span class="text-danger">*</span></label>
+                    
+                    <div class="position-relative d-inline-block mb-2" style="user-select: none;">
+                        <!-- 5 Star Boxes with Half-Star Fill -->
+                        <div class="d-inline-flex gap-2 justify-content-center align-items-center" id="starPickerContainer">
+                            @for($i = 1; $i <= 5; $i++)
+                            <div class="star-box position-relative d-inline-block" id="star_box_{{ $i }}" style="font-size: 2.8rem; line-height: 1; padding: 0 4px;">
+                                <span style="color: rgba(255, 255, 255, 0.15);">★</span>
+                                <span class="star-fill" id="star_fill_{{ $i }}" style="position: absolute; top: 0; left: 4px; color: var(--primary); overflow: hidden; width: 100%; white-space: nowrap; pointer-events: none; transition: width 0.15s ease;">★</span>
+                            </div>
+                            @endfor
+                        </div>
+
+                        <!-- Range Slider Overlay for Seamless Half-Star Click and Touch Sliders -->
+                        <input type="range" min="0.5" max="5" step="0.5" value="5" id="ratingRange" 
+                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;"
+                               oninput="setRating(parseFloat(this.value))"
+                               title="Click or drag to select whole or half stars">
                     </div>
-                    <div id="rating_text" class="fw-bold text-gold" style="font-size: 1.15rem; letter-spacing: 0.5px;">
+
+                    <!-- Live Rating Score and Label -->
+                    <div id="rating_text" class="fw-bold text-gold mb-3" style="font-size: 1.25rem; letter-spacing: 0.5px;">
                         5.0 - Exceptional!
+                    </div>
+
+                    <!-- Quick Half-Star Badges -->
+                    <div class="d-flex justify-content-center flex-wrap gap-1 align-items-center">
+                        <span class="small text-muted me-2" style="font-size:0.75rem;">Select:</span>
+                        @foreach([1.0, 2.0, 3.0, 3.5, 4.0, 4.5, 5.0] as $preset)
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill preset-btn" 
+                                id="preset_btn_{{ str_replace('.', '_', number_format($preset, 1)) }}"
+                                style="font-size: 0.75rem; border-color: rgba(255,255,255,0.15); color: var(--muted-foreground);"
+                                onclick="setRating({{ $preset }})">
+                            {{ number_format($preset, 1) }} ★
+                        </button>
+                        @endforeach
                     </div>
                 </div>
 
@@ -293,44 +315,72 @@ function render_rating_stars($rating) {
 </style>
 
 <script>
-let currentRating = 5;
+let currentRating = 5.0;
 const ratingLabels = {
-    1: '1.0 - Poor',
-    2: '2.0 - Fair',
-    3: '3.0 - Good',
-    4: '4.0 - Very Good',
-    5: '5.0 - Exceptional!'
+    0.5: '0.5 - Very Poor',
+    1.0: '1.0 - Poor',
+    1.5: '1.5 - Disappointing',
+    2.0: '2.0 - Below Average',
+    2.5: '2.5 - Average',
+    3.0: '3.0 - Satisfactory',
+    3.5: '3.5 - Good Experience',
+    4.0: '4.0 - Very Good',
+    4.5: '4.5 - Outstanding!',
+    5.0: '5.0 - Exceptional!'
 };
 
 function setRating(val) {
-    currentRating = val;
-    document.getElementById('review_rating').value = val;
-    updateStarUI(val);
-    document.getElementById('rating_text').textContent = ratingLabels[val] || (val + '.0');
-}
+    currentRating = parseFloat(val);
+    document.getElementById('review_rating').value = currentRating.toFixed(1);
+    const range = document.getElementById('ratingRange');
+    if (range) range.value = currentRating;
 
-function hoverRating(val) {
-    updateStarUI(val);
-    document.getElementById('rating_text').textContent = ratingLabels[val] || (val + '.0');
-}
-
-function resetStarHover() {
     updateStarUI(currentRating);
-    document.getElementById('rating_text').textContent = ratingLabels[currentRating] || (currentRating + '.0');
+
+    const textElem = document.getElementById('rating_text');
+    if (textElem) {
+        textElem.textContent = ratingLabels[currentRating] || (currentRating.toFixed(1) + ' Stars');
+    }
+
+    // Highlight active preset badge
+    const presets = [1.0, 2.0, 3.0, 3.5, 4.0, 4.5, 5.0];
+    presets.forEach(p => {
+        const btnId = 'preset_btn_' + p.toFixed(1).replace('.', '_');
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            if (p === currentRating) {
+                btn.style.background = 'var(--primary)';
+                btn.style.color = '#000';
+                btn.style.fontWeight = '700';
+                btn.style.borderColor = 'var(--primary)';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = 'var(--muted-foreground)';
+                btn.style.fontWeight = 'normal';
+                btn.style.borderColor = 'rgba(255,255,255,0.15)';
+            }
+        }
+    });
 }
 
 function updateStarUI(val) {
     for (let i = 1; i <= 5; i++) {
-        const star = document.getElementById('star_btn_' + i);
-        if (star) {
-            if (i <= val) {
-                star.style.color = 'var(--primary)';
+        const fill = document.getElementById('star_fill_' + i);
+        if (fill) {
+            if (val >= i) {
+                fill.style.width = '100%';
+            } else if (val >= i - 0.5) {
+                fill.style.width = '50%';
             } else {
-                star.style.color = 'rgba(255, 255, 255, 0.15)';
+                fill.style.width = '0%';
             }
         }
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    setRating(5.0);
+});
 
 function selectPendingAppointment(apptId, artistId, artistName, serviceName) {
     document.getElementById('review_appointment_id').value = apptId;
