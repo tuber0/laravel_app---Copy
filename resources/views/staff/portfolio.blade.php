@@ -67,7 +67,7 @@ render_staff_layout_start($page, 'My Portfolio');
         <div class="col-lg-12">
             @if($artist)
             <div class="glass-card p-4 p-md-5" style="border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); background: rgba(18,18,18,0.85);">
-                <form action="{{ route('staff.portfolio.update') }}" method="POST" enctype="multipart/form-data" id="portfolioForm">
+                <form action="{{ route('staff.portfolio.update', [], false) }}" method="POST" enctype="multipart/form-data" id="portfolioForm" onsubmit="handlePortfolioSubmit(event); return false;">
                     @csrf
                     
                     <!-- Profile Photo & Basic Specialties -->
@@ -578,8 +578,10 @@ render_staff_layout_start($page, 'My Portfolio');
     // ─── CSRF Token Management & Keepalive ───
     async function getFreshCsrfToken() {
         try {
-            const res = await fetch('{{ route("csrf.token") }}', {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            const endpoint = '{{ route("csrf.token", [], false) }}';
+            const res = await fetch(endpoint, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
             });
             if (res.ok) {
                 const data = await res.json();
@@ -619,18 +621,11 @@ render_staff_layout_start($page, 'My Portfolio');
     }
 
     function submitPortfolioForm() {
-        const form = document.getElementById('portfolioForm');
-        if (form) {
-            if (form.requestSubmit) {
-                form.requestSubmit();
-            } else {
-                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-            }
-        }
+        handlePortfolioSubmit();
     }
 
     async function handlePortfolioSubmit(e) {
-        if (e) e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         clearFormError();
 
         // 1. Validate pending file sizes
@@ -698,7 +693,8 @@ render_staff_layout_start($page, 'My Portfolio');
         // 6. Execute Upload via XMLHttpRequest with progress & auto-retry on 419
         function executeUpload(tokenToUse, isRetry = false) {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', form.action, true);
+            const actionUrl = form.getAttribute('action') || '{{ route("staff.portfolio.update", [], false) }}';
+            xhr.open('POST', actionUrl, true);
             xhr.setRequestHeader('X-CSRF-TOKEN', tokenToUse);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Accept', 'application/json');

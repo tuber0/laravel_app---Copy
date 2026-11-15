@@ -73,6 +73,10 @@ return [
                             return $sslCa;
                         }
                     }
+                    $host = env('DB_HOST', '127.0.0.1');
+                    if ($host === '127.0.0.1' || $host === 'localhost') {
+                        return null;
+                    }
                     $repoCa = database_path('certs/ca.pem');
                     return file_exists($repoCa) ? $repoCa : null;
                 })(),
