@@ -194,7 +194,7 @@ render_staff_layout_start($page, 'My Portfolio');
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-gold text-dark fw-bold rounded-pill px-3 py-2" id="pending_alert_count">0 Photos Selected</span>
-                                <button type="button" class="btn btn-gold btn-sm fw-bold text-dark px-3 rounded-pill shadow-sm" onclick="submitPortfolioForm()">SAVE NOW</button>
+                                <button type="button" class="btn btn-save-portfolio btn-sm fw-bold px-4 rounded-pill shadow-sm" onclick="submitPortfolioForm()">SAVE NOW</button>
                             </div>
                         </div>
 
@@ -260,14 +260,27 @@ render_staff_layout_start($page, 'My Portfolio');
                     <div id="hidden-portfolio-deletions"></div>
 
                     <!-- Sticky Bottom Submit Action Bar -->
-                    <div class="submit-area sticky-bottom bg-dark bg-opacity-95 p-4 mt-5 d-flex align-items-center justify-content-between flex-wrap gap-3" style="border-radius: 16px; backdrop-filter: blur(12px); border: 1px solid rgba(212,175,55,0.25); bottom: 20px; z-index: 100;">
-                        <div>
-                            <div class="fw-bold text-white small">Publish & Sync Changes</div>
-                            <span class="text-muted small">All gallery photos and profile updates sync immediately with customer bookings and artist portfolio pages.</span>
+                    <div class="submit-area sticky-bottom p-4 mt-5 d-flex align-items-center justify-content-between flex-wrap gap-3" style="bottom: 20px; z-index: 100;">
+                        <div style="max-width: 650px;">
+                            <div class="fw-bold text-gold text-uppercase mb-1" style="font-size: 0.95rem; letter-spacing: 1.5px; font-family: var(--font-montserrat);">Publish & Sync Changes</div>
+                            <div class="text-white-50 small" style="font-size: 0.85rem; line-height: 1.5;">All gallery photos and profile updates sync immediately with customer bookings and artist portfolio pages.</div>
+                            
+                            <!-- Live Upload Progress Bar -->
+                            <div id="saveProgressBarContainer" class="w-100 mt-3" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span id="saveProgressLabel" class="small fw-bold text-gold" style="font-size: 0.78rem;">Uploading photos (0%)...</span>
+                                    <span id="saveProgressPercent" class="small fw-bold text-white" style="font-size: 0.78rem;">0%</span>
+                                </div>
+                                <div class="progress" style="height: 7px; background: rgba(255,255,255,0.12); border-radius: 99px; overflow: hidden;">
+                                    <div id="saveProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500) !important;"></div>
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit" id="btnSavePortfolio" class="btn btn-gold btn-lg fw-bold text-black px-5 rounded-pill shadow-lg hover-scale" style="min-height: 52px; letter-spacing: 1px;">
-                            SAVE PORTFOLIO CHANGES
-                        </button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="submit" id="btnSavePortfolio" class="btn btn-save-portfolio btn-lg fw-bold px-5 rounded-pill shadow-lg" style="min-height: 52px; letter-spacing: 1px; font-size: 0.95rem;">
+                                SAVE PORTFOLIO CHANGES
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -318,6 +331,49 @@ render_staff_layout_start($page, 'My Portfolio');
 .dropzone-area.drag-over {
     border-color: var(--primary) !important;
     background: rgba(212, 175, 55, 0.08) !important;
+}
+/* Sticky Action Bar & High-Contrast Save Buttons */
+.submit-area {
+    background: rgba(18, 18, 18, 0.98) !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(212, 175, 55, 0.25) !important;
+    border-radius: 18px !important;
+}
+
+.btn-save-portfolio {
+    background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%) !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    border: none !important;
+    box-shadow: 0 4px 18px rgba(212, 175, 55, 0.45) !important;
+    transition: all 0.25s ease-in-out !important;
+}
+
+.btn-save-portfolio:hover {
+    background: linear-gradient(135deg, #FFE44D 0%, #E5C060 100%) !important;
+    color: #000000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.65) !important;
+}
+
+/* Disabled & Loading state: MUST remain bright gold with crisp, dark, 100% readable text */
+.btn-save-portfolio:disabled,
+.btn-save-portfolio.is-saving,
+#btnSavePortfolio:disabled {
+    background: linear-gradient(135deg, #FFE873 0%, #E2BE50 100%) !important;
+    color: #000000 !important;
+    opacity: 1 !important;
+    cursor: wait !important;
+    border: 2px solid #FFFFFF !important;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.6) !important;
+    transform: none !important;
+}
+
+.btn-save-portfolio:disabled .spinner-border,
+#btnSavePortfolio:disabled .spinner-border {
+    color: #000000 !important;
+    border-color: #000000 !important;
+    border-right-color: transparent !important;
 }
 @keyframes pulse {
     0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
@@ -657,12 +713,25 @@ render_staff_layout_start($page, 'My Portfolio');
         // 2. Save current title and caption values
         saveCurrentPendingInputValues();
 
-        // 3. Update button to loading state
+        // 3. Update button & progress bar to loading state
         const btn = document.getElementById('btnSavePortfolio');
         const originalBtnHtml = btn ? btn.innerHTML : 'SAVE PORTFOLIO CHANGES';
+        const progressContainer = document.getElementById('saveProgressBarContainer');
+        const progressBar = document.getElementById('saveProgressBar');
+        const progressLabel = document.getElementById('saveProgressLabel');
+        const progressPercent = document.getElementById('saveProgressPercent');
+
+        if (progressContainer) {
+            progressContainer.style.display = 'block';
+            if (progressBar) progressBar.style.width = '0%';
+            if (progressLabel) progressLabel.textContent = 'Securing session & preparing upload...';
+            if (progressPercent) progressPercent.textContent = '0%';
+        }
+
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> SECURING & UPLOADING...';
+            btn.classList.add('is-saving');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-dark" style="border-width: 2.5px;" role="status"></span> SECURING & UPLOADING...';
         }
 
         // 4. Refresh token before sending to guarantee 100% validity
@@ -700,16 +769,30 @@ render_staff_layout_start($page, 'My Portfolio');
             xhr.setRequestHeader('Accept', 'application/json');
 
             xhr.upload.onprogress = function(evt) {
-                if (evt.lengthComputable && btn) {
+                if (evt.lengthComputable) {
                     const percent = Math.round((evt.loaded / evt.total) * 100);
-                    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> SAVING (${percent}%)...`;
+                    if (progressContainer) progressContainer.style.display = 'block';
+                    if (progressBar) progressBar.style.width = percent + '%';
+                    if (progressPercent) progressPercent.textContent = percent + '%';
+
+                    if (btn) {
+                        if (percent < 100) {
+                            if (progressLabel) progressLabel.textContent = `Uploading photos (${percent}%)...`;
+                            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2 text-dark" style="border-width: 2.5px;" role="status"></span> UPLOADING (${percent}%)...`;
+                        } else {
+                            if (progressLabel) progressLabel.textContent = 'Processing & syncing changes on server...';
+                            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2 text-dark" style="border-width: 2.5px;" role="status"></span> PROCESSING & SYNCING...`;
+                        }
+                    }
                 }
             };
 
             xhr.onload = async function() {
                 if (xhr.status >= 200 && xhr.status < 300) {
+                    if (progressLabel) progressLabel.textContent = 'Upload complete! Syncing portfolio...';
+                    if (progressBar) progressBar.style.width = '100%';
                     if (btn) {
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> SAVED! RELOADING...';
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-dark" style="border-width: 2.5px;" role="status"></span> SAVED! RELOADING...';
                     }
                     window.location.reload();
                     return;
@@ -718,7 +801,7 @@ render_staff_layout_start($page, 'My Portfolio');
                 // 419 Session / CSRF Token Expired -> Auto-retry ONCE with fresh token!
                 if (xhr.status === 419 && !isRetry) {
                     if (btn) {
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> REFRESHING SESSION...';
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-dark" style="border-width: 2.5px;" role="status"></span> REFRESHING SESSION...';
                     }
                     const retriedToken = await getFreshCsrfToken();
                     formData.set('_token', retriedToken);
@@ -745,17 +828,26 @@ render_staff_layout_start($page, 'My Portfolio');
                     }
                 }
 
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                }
+
                 showFormError(errMsg);
                 if (btn) {
                     btn.disabled = false;
+                    btn.classList.remove('is-saving');
                     btn.innerHTML = originalBtnHtml;
                 }
             };
 
             xhr.onerror = function() {
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                }
                 showFormError('Network connection error while uploading. Please check your connection and try again.');
                 if (btn) {
                     btn.disabled = false;
+                    btn.classList.remove('is-saving');
                     btn.innerHTML = originalBtnHtml;
                 }
             };
