@@ -206,9 +206,11 @@ render_staff_layout_start($page, 'My Portfolio');
                                 @foreach($artist->portfolioItems as $pItem)
                                 <div class="col-sm-6 col-md-4 col-xl-3 existing-item-card" id="portfolio-item-card-{{ $pItem->id }}">
                                     <div class="card h-100 bg-dark border-secondary overflow-hidden shadow-sm" style="border-radius: 14px;">
-                                        <div class="position-relative ratio ratio-1x1">
-                                            <img src="{{ \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : asset('storage/' . $pItem->image_path) }}" class="object-fit-cover w-100 h-100" alt="{{ $pItem->title }}">
-                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:30px;height:30px;" onclick="markItemForDeletion({{ $pItem->id }})" title="Remove photo">
+                                        <div class="position-relative overflow-hidden" style="border-radius: 14px 14px 0 0;">
+                                            <div class="ratio ratio-1x1 bg-black">
+                                                <img src="{{ \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : asset('storage/' . $pItem->image_path) }}" class="object-fit-cover w-100 h-100" alt="{{ $pItem->title }}">
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center; z-index: 10; font-size: 16px; line-height: 1;" onclick="markItemForDeletion({{ $pItem->id }})" title="Remove photo">
                                                 &times;
                                             </button>
                                         </div>
@@ -362,9 +364,28 @@ render_staff_layout_start($page, 'My Portfolio');
     function addFilesToQueue(fileList) {
         if (!fileList || fileList.length === 0) return;
         saveCurrentPendingInputValues();
+
         for (let i = 0; i < fileList.length; i++) {
             const file = fileList[i];
-            if (file.type && file.type.startsWith('image/')) {
+            if (!file.type || file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
+                // Initialize previewSrc with blob URL if available
+                try {
+                    file.previewSrc = URL.createObjectURL(file);
+                } catch (e) {
+                    file.previewSrc = '';
+                }
+
+                // Also read as DataURL to ensure 100% CSP and browser compatibility
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    file.previewSrc = e.target.result;
+                    if (file._imgId) {
+                        const img = document.getElementById(file._imgId);
+                        if (img) img.src = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+
                 pendingGalleryFiles.push(file);
             }
         }
@@ -415,7 +436,10 @@ render_staff_layout_start($page, 'My Portfolio');
         container.innerHTML = '';
 
         pendingGalleryFiles.forEach((file, idx) => {
-            const objectUrl = URL.createObjectURL(file);
+            const imgId = 'pending_img_' + idx;
+            file._imgId = imgId;
+
+            const imgSrc = file.previewSrc || (window.URL ? URL.createObjectURL(file) : '');
             const cardId = 'pending_card_' + idx;
             const defaultTitle = file.customTitle !== undefined 
                 ? file.customTitle 
@@ -426,11 +450,13 @@ render_staff_layout_start($page, 'My Portfolio');
             card.className = 'col-sm-6 col-md-4 col-xl-3';
             card.id = cardId;
             card.innerHTML = `
-                <div class="card h-100 bg-dark border-gold overflow-hidden shadow" style="border: 1px solid var(--primary) !important; border-radius: 14px;">
-                    <div class="position-relative ratio ratio-1x1">
-                        <img src="${objectUrl}" class="object-fit-cover w-100 h-100" alt="New Upload Preview">
-                        <span class="badge bg-gold text-dark fw-bold position-absolute top-0 start-0 m-2 shadow-sm" style="font-size:0.65rem; letter-spacing:0.5px;">NEW PHOTO</span>
-                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center;" onclick="removePendingGalleryFile(${idx})" title="Remove photo">
+                <div class="card h-100 bg-dark overflow-hidden shadow" style="border: 1px solid var(--primary) !important; border-radius: 14px;">
+                    <div class="position-relative overflow-hidden" style="border-radius: 14px 14px 0 0;">
+                        <div class="ratio ratio-1x1 bg-black">
+                            <img id="${imgId}" src="${imgSrc}" class="object-fit-cover w-100 h-100" alt="Work Preview" style="display: block;">
+                        </div>
+                        <span class="badge bg-gold text-dark fw-bold position-absolute top-0 start-0 m-2 shadow" style="font-size:0.65rem; letter-spacing:0.5px; z-index: 10;">NEW PHOTO</span>
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center; z-index: 10; font-size: 16px; line-height: 1;" onclick="removePendingGalleryFile(${idx})" title="Remove photo">
                             &times;
                         </button>
                     </div>
@@ -474,11 +500,13 @@ render_staff_layout_start($page, 'My Portfolio');
         col.className = 'col-sm-6 col-md-4 col-xl-3';
         col.id = id;
         col.innerHTML = `
-            <div class="card h-100 bg-dark border-gold overflow-hidden shadow" style="border: 1px solid var(--primary) !important; border-radius: 14px;">
-                <div class="position-relative ratio ratio-1x1">
-                    <img src="${url}" class="object-fit-cover w-100 h-100" onerror="this.src='https://placehold.co/400x400/222/D4AF37?text=Invalid+Image+URL'" alt="URL Preview">
-                    <span class="badge bg-gold text-dark fw-bold position-absolute top-0 start-0 m-2 shadow-sm" style="font-size:0.65rem;">NEW (URL)</span>
-                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('${id}').remove(); updateGalleryStatus();" title="Remove photo">
+            <div class="card h-100 bg-dark overflow-hidden shadow" style="border: 1px solid var(--primary) !important; border-radius: 14px;">
+                <div class="position-relative overflow-hidden" style="border-radius: 14px 14px 0 0;">
+                    <div class="ratio ratio-1x1 bg-black">
+                        <img src="${url}" class="object-fit-cover w-100 h-100" onerror="this.src='https://placehold.co/400x400/222/D4AF37?text=Invalid+Image+URL'" alt="URL Preview" style="display: block;">
+                    </div>
+                    <span class="badge bg-gold text-dark fw-bold position-absolute top-0 start-0 m-2 shadow" style="font-size:0.65rem; z-index: 10;">NEW (URL)</span>
+                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center; z-index: 10; font-size: 16px; line-height: 1;" onclick="document.getElementById('${id}').remove(); updateGalleryStatus();" title="Remove photo">
                         &times;
                     </button>
                 </div>
