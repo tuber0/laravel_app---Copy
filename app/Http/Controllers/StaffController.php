@@ -538,6 +538,14 @@ class StaffController extends Controller
         $artist->portfolio_images = $portfolioArray;
         $artist->save();
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Your professional portfolio and gallery have been updated successfully!',
+                'redirect' => route('staff.portfolio')
+            ]);
+        }
+
         return back()->with('success', 'Your professional portfolio and gallery have been updated successfully!');
     }
 

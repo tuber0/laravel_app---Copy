@@ -26,4 +26,9 @@ ENV APP_DEBUG false
 ENV LOG_CHANNEL stderr
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
+# PHP upload & memory settings for portfolio images
+ENV PHP_UPLOAD_MAX_FILESIZE 100M
+ENV PHP_POST_MAX_SIZE 100M
+ENV PHP_MEM_LIMIT 512M
+
 CMD ["/start.sh"]

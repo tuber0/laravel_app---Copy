@@ -18,6 +18,13 @@ Route::get('/', function () {
     return view('public.index', compact('artists', 'recentReviews', 'categoryImages'));
 })->name('public.index');
 
+// CSRF Token Keepalive & Dynamic Refresh endpoint
+Route::get('/csrf-token', function () {
+    return response()->json([
+        'token' => csrf_token(),
+    ]);
+})->name('csrf.token');
+
 use App\Http\Controllers\Admin\ArtistController;
 
 use App\Http\Controllers\Admin\PaymentController;

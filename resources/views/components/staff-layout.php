@@ -35,6 +35,7 @@ function render_staff_layout_start($page, $title = '') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<?= csrf_token() ?>">
   <title><?= htmlspecialchars($title ?: ucfirst($page)) ?> – Pedro's Artisan Staff</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="<?= asset('assets/css/theme.css') ?>?v=<?= filemtime(public_path('assets/css/theme.css')) ?>">

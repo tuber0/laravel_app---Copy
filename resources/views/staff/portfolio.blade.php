@@ -47,6 +47,11 @@ render_staff_layout_start($page, 'My Portfolio');
     </div>
     @endif
 
+    <div id="dynamic_form_alert" class="alert alert-danger bg-danger-subtle border-danger border-opacity-25 text-danger d-flex align-items-center gap-3 mb-4 p-3 rounded-4 shadow-sm" style="display: none !important;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        <span class="fw-bold" id="dynamic_form_alert_msg"></span>
+    </div>
+
     @if($errors->any())
     <div class="alert alert-danger bg-danger-subtle border-danger border-opacity-25 text-danger mb-4 p-3 rounded-4 shadow-sm">
         <div class="fw-bold mb-1">Please correct the following errors:</div>
@@ -570,15 +575,199 @@ render_staff_layout_start($page, 'My Portfolio');
         }
     }
 
+    // ─── CSRF Token Management & Keepalive ───
+    async function getFreshCsrfToken() {
+        try {
+            const res = await fetch('{{ route("csrf.token") }}', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.token) {
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) meta.content = data.token;
+                    document.querySelectorAll('input[name="_token"]').forEach(input => input.value = data.token);
+                    return data.token;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not refresh CSRF token:', e);
+        }
+        return document.querySelector('input[name="_token"]')?.value || '';
+    }
+
+    // Ping every 3 minutes to keep PHP session continuously active
+    setInterval(getFreshCsrfToken, 3 * 60 * 1000);
+
+    function showFormError(message) {
+        const alertBox = document.getElementById('dynamic_form_alert');
+        const alertMsg = document.getElementById('dynamic_form_alert_msg');
+        if (alertBox && alertMsg) {
+            alertMsg.innerHTML = message;
+            alertBox.style.setProperty('display', 'flex', 'important');
+            alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            alert(message.replace(/<[^>]*>/g, ''));
+        }
+    }
+
+    function clearFormError() {
+        const alertBox = document.getElementById('dynamic_form_alert');
+        if (alertBox) {
+            alertBox.style.setProperty('display', 'none', 'important');
+        }
+    }
+
     function submitPortfolioForm() {
         const form = document.getElementById('portfolioForm');
         if (form) {
             if (form.requestSubmit) {
                 form.requestSubmit();
             } else {
-                form.submit();
+                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
             }
         }
+    }
+
+    async function handlePortfolioSubmit(e) {
+        if (e) e.preventDefault();
+        clearFormError();
+
+        // 1. Validate pending file sizes
+        let totalBytes = 0;
+        for (let i = 0; i < pendingGalleryFiles.length; i++) {
+            const f = pendingGalleryFiles[i];
+            if (f.size > 20 * 1024 * 1024) {
+                showFormError(`Photo <strong>"${f.name}"</strong> is too large (${(f.size / (1024 * 1024)).toFixed(1)}MB). The maximum allowed size per photo is 20MB. Please select a smaller photo.`);
+                return;
+            }
+            totalBytes += f.size;
+        }
+
+        const primaryInput = document.getElementById('primary_image_input');
+        if (primaryInput && primaryInput.files && primaryInput.files[0]) {
+            const pf = primaryInput.files[0];
+            if (pf.size > 20 * 1024 * 1024) {
+                showFormError(`Profile photo <strong>"${pf.name}"</strong> is too large (${(pf.size / (1024 * 1024)).toFixed(1)}MB). Max allowed size is 20MB.`);
+                return;
+            }
+            totalBytes += pf.size;
+        }
+
+        if (totalBytes > 45 * 1024 * 1024) {
+            showFormError(`The total size of your selected photos is <strong>${(totalBytes / (1024 * 1024)).toFixed(1)}MB</strong>. To avoid timeouts and server limits, please upload in batches of 40MB or fewer.`);
+            return;
+        }
+
+        // 2. Save current title and caption values
+        saveCurrentPendingInputValues();
+
+        // 3. Update button to loading state
+        const btn = document.getElementById('btnSavePortfolio');
+        const originalBtnHtml = btn ? btn.innerHTML : 'SAVE PORTFOLIO CHANGES';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> SECURING & UPLOADING...';
+        }
+
+        // 4. Refresh token before sending to guarantee 100% validity
+        const freshToken = await getFreshCsrfToken();
+
+        // 5. Build FormData directly
+        const form = document.getElementById('portfolioForm');
+        const formData = new FormData(form);
+
+        // Ensure token is set
+        formData.set('_token', freshToken);
+
+        // Append pending gallery files directly from memory queue
+        if (pendingGalleryFiles.length > 0) {
+            formData.delete('gallery_images[]');
+            formData.delete('gallery_titles[]');
+            formData.delete('gallery_captions[]');
+
+            pendingGalleryFiles.forEach((file) => {
+                formData.append('gallery_images[]', file);
+                const titleVal = file.customTitle !== undefined ? file.customTitle : file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+                const captionVal = file.customCaption !== undefined ? file.customCaption : '';
+                formData.append('gallery_titles[]', titleVal);
+                formData.append('gallery_captions[]', captionVal);
+            });
+        }
+
+        // 6. Execute Upload via XMLHttpRequest with progress & auto-retry on 419
+        function executeUpload(tokenToUse, isRetry = false) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+            xhr.setRequestHeader('X-CSRF-TOKEN', tokenToUse);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+
+            xhr.upload.onprogress = function(evt) {
+                if (evt.lengthComputable && btn) {
+                    const percent = Math.round((evt.loaded / evt.total) * 100);
+                    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> SAVING (${percent}%)...`;
+                }
+            };
+
+            xhr.onload = async function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    if (btn) {
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> SAVED! RELOADING...';
+                    }
+                    window.location.reload();
+                    return;
+                }
+
+                // 419 Session / CSRF Token Expired -> Auto-retry ONCE with fresh token!
+                if (xhr.status === 419 && !isRetry) {
+                    if (btn) {
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> REFRESHING SESSION...';
+                    }
+                    const retriedToken = await getFreshCsrfToken();
+                    formData.set('_token', retriedToken);
+                    executeUpload(retriedToken, true);
+                    return;
+                }
+
+                // Handle other errors (422 validation, 413 file size, 500, etc.)
+                let errMsg = 'An unexpected error occurred while saving. Please try again.';
+                try {
+                    const errData = JSON.parse(xhr.responseText);
+                    if (errData.message) {
+                        errMsg = errData.message;
+                    }
+                    if (errData.errors) {
+                        const errList = Object.values(errData.errors).flat().join('<br>');
+                        if (errList) errMsg = errList;
+                    }
+                } catch (err) {
+                    if (xhr.status === 413) {
+                        errMsg = 'Uploaded files are too large for the server. Please upload smaller or compressed photos.';
+                    } else if (xhr.status === 419) {
+                        errMsg = 'Your session expired. Please refresh the page or try clicking Save again.';
+                    }
+                }
+
+                showFormError(errMsg);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
+            };
+
+            xhr.onerror = function() {
+                showFormError('Network connection error while uploading. Please check your connection and try again.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
+            };
+
+            xhr.send(formData);
+        }
+
+        executeUpload(freshToken, false);
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -630,16 +819,10 @@ render_staff_layout_start($page, 'My Portfolio');
             }, false);
         }
 
-        // Form submit loading state
+        // Attach AJAX submission handler to form
         const form = document.getElementById('portfolioForm');
         if (form) {
-            form.addEventListener('submit', function() {
-                const btn = document.getElementById('btnSavePortfolio');
-                if (btn) {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> SAVING CHANGES...';
-                }
-            });
+            form.addEventListener('submit', handlePortfolioSubmit);
         }
     });
 </script>
