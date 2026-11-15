@@ -2,83 +2,364 @@
 require_once resource_path('views/components/admin-layout.php');
 require_once resource_path('views/components/customer-layout.php');
 $page = 'reviews';
-render_customer_layout_start($page, 'My Reviews');
+render_customer_layout_start($page, 'Client Reviews & Ratings');
 
-$my_reviews = [
-  ['service'=>'Haircut & Beard Trim','artist'=>'Pedro','rating'=>5,'date'=>'2026-03-18','comment'=>"Pedro is amazing! Best fade I've ever had. The attention to detail is incredible.",'status'=>'published'],
-  ['service'=>'Fade Cut','artist'=>'Pedro','rating'=>5,'date'=>'2026-03-05','comment'=>'Always leave feeling fresh. The whole shop has a great atmosphere.','status'=>'published'],
-];
-
-$pending_review = ['service'=>'Box Braids','artist'=>'Maya','date'=>'2026-03-28'];
-
-function render_stars_inline($rating) {
-  $html = '<div class="stars">';
-  for ($i = 1; $i <= 5; $i++) {
-    $class = $i <= $rating ? 'star-filled' : 'star-empty';
-    $html .= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="'.$class.'" style="width:16px;height:16px"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354l-4.543 2.826c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005z" clip-rule="evenodd"/></svg>';
-  }
-  return $html . '</div>';
+function render_rating_stars($rating) {
+    $html = '<div class="d-flex align-items-center gap-1">';
+    for ($i = 1; $i <= 5; $i++) {
+        $fill = 0;
+        if ($rating >= $i) {
+            $fill = 100;
+        } elseif ($rating > $i - 1) {
+            $fill = ($rating - ($i - 1)) * 100;
+        }
+        $html .= '<div style="position: relative; font-size: 1.15rem; line-height: 1; display: inline-block;">';
+        $html .= '<span style="color: rgba(255,255,255,0.15);">★</span>';
+        $html .= '<span style="position: absolute; top: 0; left: 0; color: var(--primary); overflow: hidden; width: ' . $fill . '%; white-space: nowrap;">★</span>';
+        $html .= '</div>';
+    }
+    $html .= '<span class="ms-1 fw-bold text-gold small" style="font-size:0.85rem;">' . number_format($rating, 1) . '</span>';
+    $html .= '</div>';
+    return $html;
 }
 ?>
 
 <div class="p-3">
-  <h2 class="page-title mb-1">My Reviews</h2>
-  <p class="page-subtitle mb-4">Share your experience with our team</p>
-
-  <!-- Pending Review -->
-  <div class="card p-4 mb-4" style="border-color:var(--primary)">
-    <div style="color:var(--primary);font-size:0.8rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem">⭐ Awaiting Your Review</div>
-    <div style="font-weight:700;margin-bottom:0.25rem"><?= $pending_review['service'] ?></div>
-    <div style="color:var(--muted-foreground);font-size:0.85rem;margin-bottom:1.25rem">with <?= $pending_review['artist'] ?> • <?= date('M j, Y', strtotime($pending_review['date'])) ?></div>
-
-    <!-- Star Picker -->
-    <div style="margin-bottom:1rem">
-      <label style="font-size:0.85rem;color:var(--muted-foreground);display:block;margin-bottom:0.5rem">Your Rating</label>
-      <div class="d-flex gap-2" id="starPicker">
-        <?php for ($i = 1; $i <= 5; $i++): ?>
-        <button onclick="setRating(<?= $i ?>)" id="star<?= $i ?>" style="background:none;border:none;cursor:pointer;padding:2px">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width:28px;height:28px;color:var(--muted);transition:color 0.15s"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354l-4.543 2.826c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005z" clip-rule="evenodd"/></svg>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="page-title mb-1">Client Reviews & Ratings</h2>
+            <p class="page-subtitle mb-0">Share your experience, rate completed sessions, and view your verified feedback.</p>
+        </div>
+        <button class="btn btn-gold btn-sm px-4 py-2 fw-bold shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#newReviewCard" aria-expanded="{{ ($selectedArtistId || $pendingReviews->isNotEmpty()) ? 'true' : 'false' }}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Write a Review
         </button>
-        <?php endfor; ?>
-      </div>
     </div>
 
-    <div style="margin-bottom:1rem">
-      <label class="form-label" style="font-size:0.85rem">Your Comment</label>
-      <textarea class="form-control" rows="3" placeholder="Tell us about your experience..."></textarea>
+    <!-- Feedback Alerts -->
+    @if(session('success'))
+    <div class="alert alert-success bg-dark-subtle border-success text-success mb-4 rounded-4 small fw-bold shadow-sm d-flex align-items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <span>{{ session('success') }}</span>
     </div>
-    <button class="btn btn-gold w-100">Submit Review</button>
-  </div>
+    @endif
 
-  <!-- Published Reviews -->
-  <h5 style="font-weight:700;margin-bottom:1rem">Your Reviews</h5>
-  <?php foreach ($my_reviews as $r): ?>
-  <div class="card p-4 mb-3">
-    <div class="d-flex justify-content-between align-items-start mb-2">
-      <div>
-        <div style="font-weight:600"><?= $r['service'] ?></div>
-        <div style="color:var(--muted-foreground);font-size:0.8rem">with <?= $r['artist'] ?> • <?= date('M j, Y', strtotime($r['date'])) ?></div>
-      </div>
-      <?= render_stars_inline($r['rating']) ?>
+    @if(session('error'))
+    <div class="alert alert-danger bg-dark-subtle border-danger text-danger mb-4 rounded-4 small fw-bold shadow-sm d-flex align-items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+        <span>{{ session('error') }}</span>
     </div>
-    <p style="font-size:0.875rem;color:var(--muted-foreground);margin:0"><?= htmlspecialchars($r['comment']) ?></p>
-    <div style="margin-top:0.75rem">
-      <span style="font-size:0.75rem;padding:0.2rem 0.6rem;background:rgba(193,18,31,0.15);color:#ff6b6b;border-radius:999px">✅ Published</span>
+    @endif
+
+    @if($errors->any())
+    <div class="alert alert-danger bg-dark-subtle border-danger text-danger mb-4 rounded-4 small fw-bold shadow-sm">
+        <ul class="mb-0 ps-3">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
-  </div>
-  <?php endforeach; ?>
+    @endif
+
+    <!-- Awaiting Review Section (Pending Completed Appointments) -->
+    @if($pendingReviews->isNotEmpty())
+    <div class="card p-4 mb-5 border-0 shadow-lg position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(20,20,20,0.95) 100%); border: 1px solid rgba(212,175,55,0.4) !important; border-radius: 24px;">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <span class="badge bg-gold text-dark fw-bold rounded-pill px-3 py-1 mb-2" style="font-size:0.75rem; letter-spacing:1px;">
+                    ⭐ AWAITING YOUR FEEDBACK
+                </span>
+                <h4 class="fw-bold mb-0 text-white" style="font-size: 1.4rem;">You have {{ $pendingReviews->count() }} completed session{{ $pendingReviews->count() > 1 ? 's' : '' }} ready to review</h4>
+            </div>
+            <span class="text-muted small">Help your specialist by leaving a quick star rating!</span>
+        </div>
+
+        <div class="row g-3 mt-1">
+            @foreach($pendingReviews as $appt)
+            <div class="col-md-6 col-lg-4">
+                <div class="p-3 rounded-4 h-100 d-flex flex-column justify-content-between" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-gold-subtle text-gold px-2 py-1" style="font-size:0.7rem;">{{ $appt->artist->category ?? 'Specialist' }}</span>
+                            <span class="text-gold fw-bold small">₱{{ number_format($appt->total_price, 2) }}</span>
+                        </div>
+                        <h6 class="fw-bold text-white mb-1" style="font-size:1.05rem;">{{ $appt->service->name ?? 'Specialist Service' }}</h6>
+                        <div class="text-muted small mb-3">
+                            Specialist: <strong class="text-white">{{ $appt->artist->name ?? 'Artist' }}</strong>
+                            <br>
+                            Date: {{ date('M j, Y', strtotime($appt->appointment_date)) }} • {{ date('g:i A', strtotime($appt->appointment_time)) }}
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-gold btn-sm w-100 fw-bold py-2" onclick="selectPendingAppointment({{ $appt->id }}, {{ $appt->artist_id }}, '{{ addslashes($appt->artist->name ?? 'Artist') }}', '{{ addslashes($appt->service->name ?? 'Service') }}')">
+                        ★ Rate This Session
+                    </button>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    <!-- Write / Submit Review Form Card (Collapsible) -->
+    <div class="collapse {{ ($selectedArtistId || $pendingReviews->isNotEmpty()) ? 'show' : '' }} mb-5" id="newReviewCard">
+        <div class="glass-card p-4 p-md-5 mx-auto" style="border-radius: 24px; border: 1px solid rgba(212,175,55,0.3); background: rgba(18,18,18,0.95); max-width: 800px;">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1 text-gold" style="font-family: var(--font-montserrat);">Leave a Specialist Review</h4>
+                    <p class="small text-muted mb-0">Your honest rating and review helps other clients and supports our artists.</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-toggle="collapse" data-bs-target="#newReviewCard" aria-label="Close"></button>
+            </div>
+
+            <!-- Session Context Indicator (Visible if reviewing a specific appointment) -->
+            <div id="session_context_banner" class="alert p-3 mb-4 rounded-3 align-items-center justify-content-between" style="display: none; background: rgba(212,175,55,0.1); border: 1px dashed var(--primary); color: white;">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem;">✂️</span>
+                    <div>
+                        <div class="small fw-bold text-gold" id="session_context_title">Linked Appointment Session</div>
+                        <div class="small text-white" id="session_context_text"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-light py-1 px-2" style="font-size:0.75rem;" onclick="clearSessionContext()">✕ Unlink Session</button>
+            </div>
+
+            <form action="{{ route('customer.reviews.store') }}" method="POST" id="submitReviewForm">
+                @csrf
+                <input type="hidden" name="appointment_id" id="review_appointment_id" value="">
+                <input type="hidden" name="rating" id="review_rating" value="5">
+
+                <!-- Artist Selection -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground">Select Artist / Specialist <span class="text-danger">*</span></label>
+                    <select name="artist_id" id="review_artist_id" class="form-select py-3 px-3" required style="background: var(--input); border: 1px solid var(--border); color: white; border-radius: 12px;">
+                        <option value="" disabled {{ !$selectedArtistId ? 'selected' : '' }}>Select the artist you wish to review...</option>
+                        @foreach($artists as $art)
+                            <option value="{{ $art->id }}" {{ (string)$selectedArtistId === (string)$art->id ? 'selected' : '' }}>
+                                {{ $art->name }} ({{ $art->category ?: 'Specialist' }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Star Rating Picker -->
+                <div class="mb-4 text-center p-4 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground d-block mb-2">Overall Rating <span class="text-danger">*</span></label>
+                    <div class="d-inline-flex gap-2 justify-content-center align-items-center mb-2" id="starPickerContainer" onmouseleave="resetStarHover()">
+                        @for($i = 1; $i <= 5; $i++)
+                        <button type="button" class="star-btn" id="star_btn_{{ $i }}" 
+                                onclick="setRating({{ $i }})" 
+                                onmouseenter="hoverRating({{ $i }})" 
+                                aria-label="{{ $i }} Stars"
+                                style="background: none; border: none; cursor: pointer; font-size: 2.5rem; line-height: 1; color: var(--primary); padding: 0 4px; transition: transform 0.15s ease, color 0.15s ease;">
+                            ★
+                        </button>
+                        @endfor
+                    </div>
+                    <div id="rating_text" class="fw-bold text-gold" style="font-size: 1.15rem; letter-spacing: 0.5px;">
+                        5.0 - Exceptional!
+                    </div>
+                </div>
+
+                <!-- Comment Input -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground">Your Feedback & Comments</label>
+                    <textarea name="comment" id="review_comment" class="form-control p-3" rows="3" placeholder="Tell us about your experience, styling results, atmosphere, or specialist..." style="background: var(--input); border: 1px solid var(--border); color: white; border-radius: 12px;"></textarea>
+                    <div class="form-text small text-muted">Keep it constructive and respectful. Your review may be shown publicly on the shop portfolio.</div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="d-flex gap-3 justify-content-end pt-2">
+                    <button type="button" class="btn btn-muted px-4 py-2" data-bs-toggle="collapse" data-bs-target="#newReviewCard">Cancel</button>
+                    <button type="submit" class="btn btn-gold px-5 py-2 fw-bold shadow-sm" id="btnPublishReview">
+                        Publish Review
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- My Published Reviews Section -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0" style="font-family: var(--font-montserrat);">My Published Reviews</h4>
+            <p class="small text-muted mb-0">Reviews you have shared with the Pedro's Artisan community.</p>
+        </div>
+        <span class="badge bg-dark border border-secondary text-white px-3 py-2 rounded-pill small">
+            {{ $myReviews->count() }} Total Review{{ $myReviews->count() == 1 ? '' : 's' }}
+        </span>
+    </div>
+
+    @if($myReviews->isNotEmpty())
+    <div class="row g-4 mb-5">
+        @foreach($myReviews as $r)
+        <div class="col-md-6">
+            <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between" style="border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); background: rgba(18,18,18,0.7);">
+                <div>
+                    <!-- Review Top Bar -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            @if(!empty($r->artist->image_url))
+                                <img src="{{ $r->artist->image_url }}" alt="{{ $r->artist->name }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--primary);">
+                            @else
+                                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(212,175,55,0.2); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1.5px solid var(--primary);">
+                                    {{ substr($r->artist->name ?? 'A', 0, 1) }}
+                                </div>
+                            @endif
+                            <div>
+                                <h6 class="fw-bold text-white mb-0" style="font-size: 1rem;">{{ $r->artist->name ?? 'Artisan Specialist' }}</h6>
+                                <span class="badge bg-gold-subtle text-gold px-2 py-0 mt-1" style="font-size: 0.65rem;">
+                                    {{ $r->artist->category ?? 'Specialist' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Delete Review Button -->
+                        <form action="{{ route('customer.reviews.destroy', $r->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this review?')" class="m-0">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-outline-danger p-1 rounded-circle" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;" title="Delete Review">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 14px; height: 14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Stars & Date -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary border-opacity-10">
+                        {!! render_rating_stars($r->rating) !!}
+                        <div class="small text-muted" style="font-size: 0.78rem;">
+                            {{ $r->created_at->format('M j, Y') }}
+                        </div>
+                    </div>
+
+                    <!-- Session context tag if any -->
+                    @if(!empty($r->appointment) && !empty($r->appointment->service))
+                    <div class="mb-2">
+                        <span class="small text-muted" style="font-size: 0.75rem;">
+                            ✂️ Service: <strong class="text-white">{{ $r->appointment->service->name }}</strong>
+                        </span>
+                    </div>
+                    @endif
+
+                    <!-- Comment Body -->
+                    <p class="small text-foreground mb-0" style="line-height: 1.6; font-style: italic;">
+                        "{{ $r->comment ?: 'No written comment provided with this rating.' }}"
+                    </p>
+                </div>
+
+                <!-- Footer Tag -->
+                <div class="mt-3 pt-3 border-top border-secondary border-opacity-10 d-flex justify-content-between align-items-center">
+                    <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1 small" style="font-size:0.68rem;">
+                        ✓ Verified Client Review
+                    </span>
+                    <a href="{{ route('customer.artists.portfolio', $r->artist_id) }}" class="small text-gold text-decoration-none fw-bold" style="font-size:0.75rem;">
+                        View Artist Portfolio →
+                    </a>
+                </div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+    @elseif($pendingReviews->isEmpty())
+    <!-- Empty State -->
+    <div class="card p-5 text-center my-4 border-0 shadow-sm" style="background: rgba(18,18,18,0.5); border: 1px dashed rgba(255,255,255,0.1) !important; border-radius: 24px;">
+        <div class="d-inline-flex p-3 rounded-circle mb-3 mx-auto" style="background: rgba(212,175,55,0.1); color: var(--primary);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px;height:48px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+        </div>
+        <h4 class="fw-bold text-white mb-2">No Reviews Submitted Yet</h4>
+        <p class="text-muted small mx-auto mb-4" style="max-width: 480px;">
+            You haven't reviewed any artist sessions yet. Once you complete appointments or visit any of our creative specialists, you can share your rating and review here!
+        </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <button class="btn btn-gold px-4 py-2 fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#newReviewCard">
+                Write a Review
+            </button>
+            <a href="{{ route('customer.book') }}" class="btn btn-outline-gold px-4 py-2 fw-bold">
+                Book an Appointment
+            </a>
+        </div>
+    </div>
+    @endif
 </div>
 
+<style>
+.star-btn:hover {
+    transform: scale(1.2);
+}
+.bg-gold-subtle {
+    background: rgba(212, 175, 55, 0.12);
+    color: var(--primary);
+}
+</style>
+
 <script>
-let selectedRating = 0;
-function setRating(n) {
-  selectedRating = n;
-  for (let i = 1; i <= 5; i++) {
-    const star = document.getElementById('star' + i).querySelector('svg');
-    star.style.color = i <= n ? 'var(--primary)' : 'var(--muted)';
-  }
+let currentRating = 5;
+const ratingLabels = {
+    1: '1.0 - Poor',
+    2: '2.0 - Fair',
+    3: '3.0 - Good',
+    4: '4.0 - Very Good',
+    5: '5.0 - Exceptional!'
+};
+
+function setRating(val) {
+    currentRating = val;
+    document.getElementById('review_rating').value = val;
+    updateStarUI(val);
+    document.getElementById('rating_text').textContent = ratingLabels[val] || (val + '.0');
+}
+
+function hoverRating(val) {
+    updateStarUI(val);
+    document.getElementById('rating_text').textContent = ratingLabels[val] || (val + '.0');
+}
+
+function resetStarHover() {
+    updateStarUI(currentRating);
+    document.getElementById('rating_text').textContent = ratingLabels[currentRating] || (currentRating + '.0');
+}
+
+function updateStarUI(val) {
+    for (let i = 1; i <= 5; i++) {
+        const star = document.getElementById('star_btn_' + i);
+        if (star) {
+            if (i <= val) {
+                star.style.color = 'var(--primary)';
+            } else {
+                star.style.color = 'rgba(255, 255, 255, 0.15)';
+            }
+        }
+    }
+}
+
+function selectPendingAppointment(apptId, artistId, artistName, serviceName) {
+    document.getElementById('review_appointment_id').value = apptId;
+    const artistSelect = document.getElementById('review_artist_id');
+    if (artistSelect) {
+        artistSelect.value = artistId;
+    }
+    const banner = document.getElementById('session_context_banner');
+    const label = document.getElementById('session_context_text');
+    if (banner && label) {
+        label.textContent = serviceName + ' with ' + artistName;
+        banner.style.display = 'flex';
+    }
+    const formCard = document.getElementById('newReviewCard');
+    if (formCard) {
+        const collapse = bootstrap.Collapse.getOrCreateInstance(formCard);
+        collapse.show();
+        formCard.scrollIntoView({ behavior: 'smooth' });
+    }
+    document.getElementById('review_comment').focus();
+}
+
+function clearSessionContext() {
+    document.getElementById('review_appointment_id').value = '';
+    const banner = document.getElementById('session_context_banner');
+    if (banner) {
+        banner.style.display = 'none';
+    }
 }
 </script>
 
 <?php render_customer_layout_end(); ?>
-

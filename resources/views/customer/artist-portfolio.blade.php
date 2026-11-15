@@ -172,9 +172,14 @@ render_customer_layout_start($page, $artist->name . "'s Portfolio");
 
     <!-- Artist Reviews -->
     <div class="mt-5 pt-4">
-        <div class="d-flex justify-content-between align-items-end mb-4">
-            <h3 style="font-family: var(--font-bebas); font-size: 2rem; color: var(--foreground); letter-spacing: 1px; margin-bottom: 0;">Client Feedback</h3>
-            <div style="color: var(--muted-foreground); font-size: 0.9rem; font-weight: 600;"><?= $artist->reviews->count() ?> Reviews</div>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h3 style="font-family: var(--font-bebas); font-size: 2rem; color: var(--foreground); letter-spacing: 1px; margin-bottom: 0;">Client Feedback</h3>
+                <div style="color: var(--muted-foreground); font-size: 0.85rem; font-weight: 500;"><?= $artist->reviews->count() ?> Verified Reviews</div>
+            </div>
+            <a href="<?= route('customer.reviews', ['artist_id' => $artist->id]) ?>" class="btn btn-outline-gold btn-sm px-3 py-2 rounded-pill fw-bold" style="font-size:0.75rem;">
+                ★ Write a Review
+            </a>
         </div>
 
         <?php if ($artist->reviews->isEmpty()): ?>

@@ -106,6 +106,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::post('/appointments/{id}/reschedule', [CustomerController::class, 'rescheduleAppointment'])->name('appointments.reschedule');
     Route::post('/appointments/{id}/cancel', [CustomerController::class, 'cancelAppointment'])->name('appointments.cancel');
     Route::post('/reviews', [CustomerController::class, 'submitReview'])->name('reviews.store');
+    Route::delete('/reviews/{id}', [CustomerController::class, 'destroyReview'])->name('reviews.destroy');
 
     // Customer Live Queue Actions
     Route::post('/queue/join', [CustomerController::class, 'joinQueue'])->name('queue.join');

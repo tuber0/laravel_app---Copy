@@ -230,6 +230,32 @@ class CustomerController extends Controller
         return view('customer.services', compact('services', 'categories'));
     }
 
+    public function reviews(Request $request)
+    {
+        $user = Auth::user();
+
+        // 1. Completed appointments awaiting review
+        $pendingReviews = Appointment::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereDoesntHave('review')
+            ->with(['artist', 'service'])
+            ->orderBy('appointment_date', 'desc')
+            ->get();
+
+        // 2. Reviews previously submitted by this customer
+        $myReviews = Review::where('user_id', $user->id)
+            ->with(['artist', 'appointment.service'])
+            ->latest()
+            ->get();
+
+        // 3. All active artists so the customer can also write a review for any artist
+        $artists = Artist::orderBy('name')->get();
+
+        $selectedArtistId = $request->query('artist_id');
+
+        return view('customer.reviews', compact('pendingReviews', 'myReviews', 'artists', 'selectedArtistId'));
+    }
+
     public function settings()
     {
         $user = Auth::user();
@@ -340,38 +366,72 @@ class CustomerController extends Controller
     public function submitReview(Request $request)
     {
         $validated = $request->validate([
-            'appointment_id' => 'required|exists:appointments,id',
-            'artist_id' => 'required|exists:artists,id',
-            'rating' => 'required|numeric|min:1|max:5',
-            'comment' => 'nullable|string|max:1000',
+            'artist_id'      => 'required|exists:artists,id',
+            'appointment_id' => 'nullable|exists:appointments,id',
+            'rating'         => 'required|numeric|min:1|max:5',
+            'comment'        => 'nullable|string|max:1000',
         ]);
 
-        // Check if user already reviewed this appointment
-        $existing = Review::where('appointment_id', $validated['appointment_id'])->first();
-        if ($existing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You have already reviewed this session.'
-            ], 400);
+        // Check if user already reviewed this specific appointment
+        if (!empty($validated['appointment_id'])) {
+            $existing = Review::where('appointment_id', $validated['appointment_id'])->first();
+            if ($existing) {
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You have already reviewed this appointment session.'
+                    ], 400);
+                }
+                return back()->with('error', 'You have already reviewed this appointment session.');
+            }
         }
 
         $review = Review::create([
-            'user_id' => Auth::id(),
-            'artist_id' => $validated['artist_id'],
-            'appointment_id' => $validated['appointment_id'],
-            'rating' => $validated['rating'],
-            'comment' => $validated['comment'],
+            'user_id'        => Auth::id(),
+            'artist_id'      => $validated['artist_id'],
+            'appointment_id' => $validated['appointment_id'] ?? null,
+            'rating'         => $validated['rating'],
+            'comment'        => $validated['comment'] ?? null,
         ]);
 
         // Update Artist average rating
         $artist = Artist::find($validated['artist_id']);
-        $avg = Review::where('artist_id', $artist->id)->avg('rating');
-        $artist->update(['rating' => $avg]);
+        if ($artist) {
+            $avg = Review::where('artist_id', $artist->id)->avg('rating');
+            $artist->update(['rating' => $avg ? round($avg, 2) : 5.0]);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Review submitted successfully! Thank you for your feedback.'
-        ]);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Review submitted successfully! Thank you for your feedback.',
+                'review'  => $review
+            ]);
+        }
+
+        return back()->with('success', 'Review submitted successfully! Thank you for your feedback.');
+    }
+
+    public function destroyReview($id)
+    {
+        $review = Review::where('user_id', Auth::id())->findOrFail($id);
+        $artistId = $review->artist_id;
+        $review->delete();
+
+        $artist = Artist::find($artistId);
+        if ($artist) {
+            $avg = Review::where('artist_id', $artistId)->avg('rating');
+            $artist->update(['rating' => $avg ? round($avg, 2) : 5.0]);
+        }
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Your review has been removed successfully.'
+            ]);
+        }
+
+        return back()->with('success', 'Your review has been removed.');
     }
 
     public function joinQueue(Request $request)
