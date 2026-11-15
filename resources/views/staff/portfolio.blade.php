@@ -26,43 +26,58 @@ render_staff_layout_start($page, 'My Portfolio');
     </div>
     @endif
 
-    <div class="row align-items-center mb-5">
+    <div class="row align-items-center mb-4">
         <div class="col">
             <h1 class="page-title mb-0" style="font-family: var(--font-bebas); letter-spacing: 2px; color: var(--primary); font-size: 3rem;">Manage Professional Portfolio</h1>
-            <p class="text-muted-foreground small mb-0 fw-medium">Showcase your talent. Update your bio, specialties, and gallery to stand out to clients.</p>
+            <p class="text-muted-foreground small mb-0 fw-medium">Showcase your talent. Update your profile photo, bio, specialties, and gallery to stand out to clients.</p>
         </div>
     </div>
 
     @if(session('success'))
-    <div class="alert alert-success bg-success-subtle border-success border-opacity-25 text-success d-flex align-items-center gap-3 mb-4 p-3" style="border-radius: 12px;">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div class="alert alert-success bg-success-subtle border-success border-opacity-25 text-success d-flex align-items-center gap-3 mb-4 p-3 rounded-4 shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <span class="fw-bold">{{ session('success') }}</span>
     </div>
     @endif
     
     @if(session('error'))
-    <div class="alert alert-danger bg-danger-subtle border-danger border-opacity-25 text-danger d-flex align-items-center gap-3 mb-4 p-3" style="border-radius: 12px;">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+    <div class="alert alert-danger bg-danger-subtle border-danger border-opacity-25 text-danger d-flex align-items-center gap-3 mb-4 p-3 rounded-4 shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
         <span class="fw-bold">{{ session('error') }}</span>
+    </div>
+    @endif
+
+    @if($errors->any())
+    <div class="alert alert-danger bg-danger-subtle border-danger border-opacity-25 text-danger mb-4 p-3 rounded-4 shadow-sm">
+        <div class="fw-bold mb-1">Please correct the following errors:</div>
+        <ul class="mb-0 ps-3">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
     @endif
 
     <div class="row">
         <div class="col-lg-12">
             @if($artist)
-            <div class="glass-card p-4 p-md-5" style="border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); background: rgba(18,18,18,0.8);">
+            <div class="glass-card p-4 p-md-5" style="border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); background: rgba(18,18,18,0.85);">
                 <form action="{{ route('staff.portfolio.update') }}" method="POST" enctype="multipart/form-data" id="portfolioForm">
                     @csrf
                     
+                    <!-- Profile Photo & Basic Specialties -->
                     <div class="row g-5 mb-5 align-items-center">
                         <div class="col-md-4 col-lg-3 text-center">
                             <div class="position-relative d-inline-block">
-                                <div class="profile-preview-wrapper shadow-lg" style="width: 180px; height: 180px; border-radius: 50%; padding: 4px; background: linear-gradient(45deg, var(--primary), transparent); overflow: hidden;">
+                                <div class="profile-preview-wrapper shadow-lg" style="width: 170px; height: 170px; border-radius: 50%; padding: 4px; background: linear-gradient(45deg, var(--primary), transparent); overflow: hidden;">
                                     @php
                                         $photoPath = $artist->profile_photo ?: $artist->image_url;
                                     @endphp
                                     @if($photoPath)
                                         <img id="primary_preview" src="{{ \Illuminate\Support\Str::startsWith($photoPath, 'http') ? $photoPath : asset('storage/' . $photoPath) }}" alt="Profile Image" class="img-fluid rounded-circle object-fit-cover w-100 h-100 shadow" style="background: var(--input)">
+                                        <div id="primary_preview_placeholder" class="rounded-circle bg-muted d-none align-items-center justify-content-center w-100 h-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" style="width:64px; color:var(--muted-foreground)"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                                        </div>
                                     @else
                                         <div id="primary_preview_placeholder" class="rounded-circle bg-muted d-flex align-items-center justify-content-center w-100 h-100">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" style="width:64px; color:var(--muted-foreground)"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
@@ -70,13 +85,17 @@ render_staff_layout_start($page, 'My Portfolio');
                                         <img id="primary_preview" src="" class="img-fluid rounded-circle object-fit-cover w-100 h-100 shadow d-none" style="background: var(--input)">
                                     @endif
                                 </div>
-                                <label for="primary_image_input" class="btn btn-gold btn-sm position-absolute bottom-0 end-0 rounded-circle p-2 shadow-lg" style="width: 40px; height: 40px; border: 2px solid #121212;">
+                                <label for="primary_image_input" class="btn btn-gold btn-sm position-absolute bottom-0 end-0 rounded-circle p-2 shadow-lg" style="width: 40px; height: 40px; border: 2px solid #121212; cursor: pointer;" title="Upload photo file">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" /></svg>
                                 </label>
-                                <input type="file" id="primary_image_input" name="primary_image" class="d-none" accept="image/jpeg, image/png, image/jpg, image/webp" onchange="previewPrimaryImage(this)">
+                                <input type="file" id="primary_image_input" name="primary_image" class="d-none" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif" onchange="previewPrimaryImage(this)">
                             </div>
-                            <div class="mt-3 text-gold small fw-bold text-uppercase" style="letter-spacing: 1px;">Profile Photo</div>
+                            <div class="mt-2 text-gold small fw-bold text-uppercase" style="letter-spacing: 1px;">Profile Photo</div>
+                            <div class="mt-2">
+                                <input type="url" name="primary_image_url" id="primary_image_url" class="form-control form-control-sm bg-dark border-secondary text-white text-center" placeholder="OR paste image URL (https://...)" oninput="previewPrimaryUrl(this.value)">
+                            </div>
                         </div>
+
                         <div class="col-md-8 col-lg-9">
                             <div class="card bg-input border-0 p-4" style="border-radius: 16px;">
                                 <div class="row g-3">
@@ -138,76 +157,145 @@ render_staff_layout_start($page, 'My Portfolio');
                         @error('bio') <div class="text-danger small mt-1 fw-bold">{{ $message }}</div> @enderror
                     </div>
 
-                    <!-- Portfolio Gallery Items Table / Grid -->
+                    <!-- Portfolio Gallery Items Section -->
                     <div class="gallery-management-section mt-5 border-top border-secondary pt-5">
-                        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
                             <div>
-                                <h4 class="mb-1 fw-bold" style="color:var(--foreground); font-family:var(--font-montserrat)">Portfolio Gallery Items</h4>
-                                <p class="text-muted-foreground small mb-0">Structured gallery pieces showcasing your artisan work.</p>
+                                <h4 class="mb-1 fw-bold text-white" style="font-family:var(--font-montserrat)">Portfolio Gallery Items</h4>
+                                <p class="text-muted-foreground small mb-0">Structured gallery pieces showcasing your artisan work to clients.</p>
                             </div>
-                            <label for="gallery_images_input" class="btn btn-gold px-4 py-2 fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px; border-radius: 8px;">
-                                + Add Portfolio Photos
-                            </label>
-                            <input type="file" id="gallery_images_input" name="gallery_images[]" class="d-none" accept="image/jpeg, image/png, image/jpg, image/webp" multiple>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-gold px-4 py-2 fw-bold text-uppercase shadow-sm d-inline-flex align-items-center gap-2" style="font-size: 0.75rem; letter-spacing: 1px; border-radius: 8px;" onclick="triggerGalleryFileInput()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    + Add Portfolio Photos
+                                </button>
+                                <button type="button" class="btn btn-outline-gold px-3 py-2 fw-bold text-uppercase d-inline-flex align-items-center gap-2" style="font-size: 0.75rem; letter-spacing: 1px; border-radius: 8px;" onclick="openUrlItemModal()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+                                    + Add via URL
+                                </button>
+                                <input type="file" id="temp_gallery_input" class="d-none" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif" multiple onchange="handleGalleryFilesSelected(this)">
+                                <input type="file" id="gallery_images_input" name="gallery_images[]" class="d-none" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif" multiple>
+                            </div>
                         </div>
-                        
-                        @if($artist->portfolioItems && $artist->portfolioItems->count() > 0)
-                        <div class="row g-4 mb-4">
-                            @foreach($artist->portfolioItems as $pItem)
-                            <div class="col-sm-6 col-md-4 col-xl-3" id="portfolio-item-card-{{ $pItem->id }}">
-                                <div class="card h-100 bg-dark border-secondary overflow-hidden shadow-sm">
-                                    <div class="position-relative ratio ratio-1x1">
-                                        <img src="{{ \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : asset('storage/' . $pItem->image_path) }}" class="object-fit-cover w-100 h-100" alt="{{ $pItem->title }}">
-                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1" style="width:30px;height:30px;" onclick="markItemForDeletion({{ $pItem->id }})">
-                                            &times;
-                                        </button>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="fw-bold text-white small mb-1 text-truncate">{{ $pItem->title ?: 'Work Sample' }}</div>
-                                        <div class="text-muted small text-truncate">{{ $pItem->caption ?: 'Category: ' . ($pItem->category ?: $artist->category) }}</div>
-                                    </div>
+
+                        <!-- Pending Uploads Notification Banner -->
+                        <div id="pending_alert_banner" class="alert alert-warning border-warning bg-dark-subtle text-warning mb-4 rounded-4 shadow-sm align-items-center justify-content-between p-3 flex-wrap gap-3" style="display: none;">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-size:1.3rem;">📸</span>
+                                <div>
+                                    <strong class="text-gold" id="pending_alert_title">New photos ready to save!</strong>
+                                    <div class="small opacity-75">Click <strong>"SAVE PORTFOLIO CHANGES"</strong> or the button on the right to publish your work samples.</div>
                                 </div>
                             </div>
-                            @endforeach
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-gold text-dark fw-bold rounded-pill px-3 py-2" id="pending_alert_count">0 Photos Selected</span>
+                                <button type="button" class="btn btn-gold btn-sm fw-bold text-dark px-3 rounded-pill shadow-sm" onclick="submitPortfolioForm()">SAVE NOW</button>
+                            </div>
                         </div>
-                        @elseif(is_array($artist->portfolio_images) && count($artist->portfolio_images) > 0)
-                        <div class="row g-4" id="gallery-container">
-                            @foreach($artist->portfolio_images as $index => $img)
-                            <div class="col-6 col-sm-4 col-md-3 col-xl-2 gallery-item-card" data-url="{{ trim($img) }}">
-                                <div class="position-relative ratio ratio-1x1 rounded-4 overflow-hidden shadow-sm" style="border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s ease;">
-                                    <img src="{{ \Illuminate\Support\Str::startsWith(trim($img), 'http') ? trim($img) : asset('storage/' . trim($img)) }}" class="object-fit-cover w-100 h-100" alt="Portfolio Image">
-                                    <div class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-black bg-opacity-60 overlay-action opacity-0 hover-opacity-100 transition" style="top:0; left:0; backdrop-filter: blur(2px);">
-                                        <button type="button" class="btn btn-sm btn-danger fw-bold rounded-pill px-4 remove-gallery-btn" style="font-size: 0.7rem; letter-spacing: 1px;">
-                                            REMOVE
-                                        </button>
+
+                        <!-- Combined Gallery Grid -->
+                        <div class="row g-4 mb-4" id="gallery_grid_container">
+                            <!-- Container for Newly Selected Local File Previews -->
+                            <div id="pending_files_container" style="display: contents;"></div>
+
+                            <!-- Container for Items Added via Image URL -->
+                            <div id="pending_urls_container" style="display: contents;"></div>
+
+                            <!-- Existing PortfolioItems from Database -->
+                            @if($artist->portfolioItems && $artist->portfolioItems->count() > 0)
+                                @foreach($artist->portfolioItems as $pItem)
+                                <div class="col-sm-6 col-md-4 col-xl-3 existing-item-card" id="portfolio-item-card-{{ $pItem->id }}">
+                                    <div class="card h-100 bg-dark border-secondary overflow-hidden shadow-sm" style="border-radius: 14px;">
+                                        <div class="position-relative ratio ratio-1x1">
+                                            <img src="{{ \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : asset('storage/' . $pItem->image_path) }}" class="object-fit-cover w-100 h-100" alt="{{ $pItem->title }}">
+                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:30px;height:30px;" onclick="markItemForDeletion({{ $pItem->id }})" title="Remove photo">
+                                                &times;
+                                            </button>
+                                        </div>
+                                        <div class="p-3">
+                                            <div class="fw-bold text-white small mb-1 text-truncate">{{ $pItem->title ?: 'Work Sample' }}</div>
+                                            <div class="text-muted small text-truncate">{{ $pItem->caption ?: ($artist->category ? 'Specialty: ' . $artist->category : 'Portfolio Work') }}</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            @endforeach
+                                @endforeach
+                            @elseif(is_array($artist->portfolio_images) && count($artist->portfolio_images) > 0)
+                                @foreach($artist->portfolio_images as $index => $img)
+                                <div class="col-6 col-sm-4 col-md-3 col-xl-2 gallery-item-card existing-item-card" data-url="{{ trim($img) }}">
+                                    <div class="position-relative ratio ratio-1x1 rounded-4 overflow-hidden shadow-sm" style="border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s ease;">
+                                        <img src="{{ \Illuminate\Support\Str::startsWith(trim($img), 'http') ? trim($img) : asset('storage/' . trim($img)) }}" class="object-fit-cover w-100 h-100" alt="Portfolio Image">
+                                        <div class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-black bg-opacity-60 overlay-action opacity-0 hover-opacity-100 transition" style="top:0; left:0; backdrop-filter: blur(2px);">
+                                            <button type="button" class="btn btn-sm btn-danger fw-bold rounded-pill px-4 remove-gallery-btn" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                                REMOVE
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            @endif
                         </div>
-                        @else
-                        <div class="col-12 text-center py-5 rounded-4" style="background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.05);">
-                            <div class="mb-3 opacity-25">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" style="width:48px"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+
+                        <!-- Empty State Notice (shown when 0 items exist & 0 pending) with Drag & Drop -->
+                        <div class="col-12 text-center py-5 rounded-4 transition dropzone-area" id="empty_gallery_state" style="background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.12); cursor: pointer; {{ (($artist->portfolioItems && $artist->portfolioItems->count() > 0) || (is_array($artist->portfolio_images) && count($artist->portfolio_images) > 0)) ? 'display: none;' : '' }}" onclick="triggerGalleryFileInput()">
+                            <div class="mb-3 opacity-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:58px; height:58px; color:var(--primary);"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
                             </div>
-                            <p class="text-muted-foreground small fw-medium mb-0">No gallery items yet. Click "+ Add Portfolio Photos" to upload work samples.</p>
+                            <h5 class="fw-bold text-white mb-2">No Gallery Photos Yet</h5>
+                            <p class="text-muted small fw-medium mb-3">Click here or drag & drop photo files to upload your artisan work samples.</p>
+                            <button type="button" class="btn btn-gold btn-sm px-4 py-2 fw-bold text-uppercase" style="letter-spacing: 0.5px;" onclick="event.stopPropagation(); triggerGalleryFileInput();">
+                                Upload Photos Now
+                            </button>
                         </div>
-                        @endif
                     </div>
 
                     <!-- Hidden container to hold removed URLs & Item IDs -->
                     <div id="hidden-removals"></div>
                     <div id="hidden-portfolio-deletions"></div>
 
-                    <div class="submit-area sticky-bottom bg-dark bg-opacity-75 p-4 mt-5 d-flex align-items-center justify-content-between" style="border-radius: 16px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.05); bottom: 20px;">
-                        <span class="text-muted-foreground small d-none d-md-block fw-medium">All updates sync directly with customer booking & portfolio views.</span>
-                        <button type="submit" class="btn btn-gold btn-lg fw-bold text-black px-5 rounded-pill shadow-lg hover-scale" style="min-height: 54px; letter-spacing: 1px;">
+                    <!-- Sticky Bottom Submit Action Bar -->
+                    <div class="submit-area sticky-bottom bg-dark bg-opacity-95 p-4 mt-5 d-flex align-items-center justify-content-between flex-wrap gap-3" style="border-radius: 16px; backdrop-filter: blur(12px); border: 1px solid rgba(212,175,55,0.25); bottom: 20px; z-index: 100;">
+                        <div>
+                            <div class="fw-bold text-white small">Publish & Sync Changes</div>
+                            <span class="text-muted small">All gallery photos and profile updates sync immediately with customer bookings and artist portfolio pages.</span>
+                        </div>
+                        <button type="submit" id="btnSavePortfolio" class="btn btn-gold btn-lg fw-bold text-black px-5 rounded-pill shadow-lg hover-scale" style="min-height: 52px; letter-spacing: 1px;">
                             SAVE PORTFOLIO CHANGES
                         </button>
                     </div>
                 </form>
             </div>
             @endif
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Photo by Image URL -->
+<div class="modal fade" id="addUrlPhotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0" style="background: rgba(26,26,26,0.98); border: 1px solid rgba(212,175,55,0.3) !important; border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-gold" style="font-family: var(--font-montserrat);">Add Portfolio Photo via URL</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground">Image URL <span class="text-danger">*</span></label>
+                    <input type="url" id="modal_photo_url" class="form-control bg-dark border-secondary text-white py-2" placeholder="https://images.unsplash.com/photo-..." required>
+                    <div class="form-text small text-muted">Paste a direct link to an image (JPG, PNG, WebP).</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground">Title</label>
+                    <input type="text" id="modal_photo_title" class="form-control bg-dark border-secondary text-white py-2" placeholder="e.g. Clean Taper Fade">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-uppercase text-muted-foreground">Caption (Optional)</label>
+                    <input type="text" id="modal_photo_caption" class="form-control bg-dark border-secondary text-white py-2" placeholder="e.g. Styled with matte pomade">
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-muted px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-gold px-4 fw-bold" onclick="confirmAddUrlPhoto()">Add Photo</button>
+            </div>
         </div>
     </div>
 </div>
@@ -219,6 +307,11 @@ render_staff_layout_start($page, 'My Portfolio');
 .bg-input { background: rgba(255, 255, 255, 0.03); }
 .text-gold { color: var(--primary) !important; }
 .hover-scale:hover { transform: scale(1.02); }
+#pending_files_container, #pending_urls_container { display: contents; }
+.dropzone-area.drag-over {
+    border-color: var(--primary) !important;
+    background: rgba(212, 175, 55, 0.08) !important;
+}
 @keyframes pulse {
     0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
     70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
@@ -227,6 +320,7 @@ render_staff_layout_start($page, 'My Portfolio');
 </style>
 
 <script>
+    // ─── Primary Profile Photo Previews ───
     function previewPrimaryImage(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -242,6 +336,168 @@ render_staff_layout_start($page, 'My Portfolio');
         }
     }
 
+    function previewPrimaryUrl(url) {
+        if (url && url.trim().length > 5) {
+            const preview = document.getElementById('primary_preview');
+            const placeholder = document.getElementById('primary_preview_placeholder');
+            preview.src = url.trim();
+            preview.classList.remove('d-none');
+            if (placeholder) placeholder.classList.add('d-none');
+        }
+    }
+
+    // ─── Multiple Gallery File Upload Queue ───
+    let pendingGalleryFiles = [];
+
+    function triggerGalleryFileInput() {
+        const temp = document.getElementById('temp_gallery_input');
+        if (temp) {
+            temp.value = '';
+            temp.click();
+        } else {
+            document.getElementById('gallery_images_input').click();
+        }
+    }
+
+    function addFilesToQueue(fileList) {
+        if (!fileList || fileList.length === 0) return;
+        saveCurrentPendingInputValues();
+        for (let i = 0; i < fileList.length; i++) {
+            const file = fileList[i];
+            if (file.type && file.type.startsWith('image/')) {
+                pendingGalleryFiles.push(file);
+            }
+        }
+        syncGalleryFilesInput();
+        renderPendingGalleryCards();
+    }
+
+    function handleGalleryFilesSelected(input) {
+        if (input.files && input.files.length > 0) {
+            addFilesToQueue(input.files);
+        }
+    }
+
+    function saveCurrentPendingInputValues() {
+        const titleInputs = document.querySelectorAll('#pending_files_container input[name="gallery_titles[]"]');
+        const captionInputs = document.querySelectorAll('#pending_files_container input[name="gallery_captions[]"]');
+        titleInputs.forEach((input, i) => {
+            if (pendingGalleryFiles[i]) {
+                pendingGalleryFiles[i].customTitle = input.value;
+            }
+        });
+        captionInputs.forEach((input, i) => {
+            if (pendingGalleryFiles[i]) {
+                pendingGalleryFiles[i].customCaption = input.value;
+            }
+        });
+    }
+
+    function removePendingGalleryFile(index) {
+        saveCurrentPendingInputValues();
+        pendingGalleryFiles.splice(index, 1);
+        syncGalleryFilesInput();
+        renderPendingGalleryCards();
+    }
+
+    function syncGalleryFilesInput() {
+        try {
+            const dt = new DataTransfer();
+            pendingGalleryFiles.forEach(file => dt.items.add(file));
+            document.getElementById('gallery_images_input').files = dt.files;
+        } catch (e) {
+            console.warn('DataTransfer sync warning:', e);
+        }
+    }
+
+    function renderPendingGalleryCards() {
+        const container = document.getElementById('pending_files_container');
+        container.innerHTML = '';
+
+        pendingGalleryFiles.forEach((file, idx) => {
+            const objectUrl = URL.createObjectURL(file);
+            const cardId = 'pending_card_' + idx;
+            const defaultTitle = file.customTitle !== undefined 
+                ? file.customTitle 
+                : file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+            const captionVal = file.customCaption !== undefined ? file.customCaption : '';
+
+            const card = document.createElement('div');
+            card.className = 'col-sm-6 col-md-4 col-xl-3';
+            card.id = cardId;
+            card.innerHTML = `
+                <div class="card h-100 bg-dark border-gold overflow-hidden shadow" style="border: 1px solid var(--primary) !important; border-radius: 14px;">
+                    <div class="position-relative ratio ratio-1x1">
+                        <img src="${objectUrl}" class="object-fit-cover w-100 h-100" alt="New Upload Preview">
+                        <span class="badge bg-gold text-dark fw-bold position-absolute top-0 start-0 m-2 shadow-sm" style="font-size:0.65rem; letter-spacing:0.5px;">NEW PHOTO</span>
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center;" onclick="removePendingGalleryFile(${idx})" title="Remove photo">
+                            &times;
+                        </button>
+                    </div>
+                    <div class="p-3">
+                        <label class="small text-muted mb-1" style="font-size:0.75rem;">Photo Title</label>
+                        <input type="text" name="gallery_titles[]" class="form-control form-control-sm bg-input border-secondary text-white mb-2" placeholder="Title (e.g. Skin Fade)" value="${defaultTitle}">
+                        <label class="small text-muted mb-1" style="font-size:0.75rem;">Caption (optional)</label>
+                        <input type="text" name="gallery_captions[]" class="form-control form-control-sm bg-input border-secondary text-white" placeholder="Caption (optional)" value="${captionVal}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        updateGalleryStatus();
+    }
+
+    // ─── Add via URL Modal ───
+    function openUrlItemModal() {
+        document.getElementById('modal_photo_url').value = '';
+        document.getElementById('modal_photo_title').value = '';
+        document.getElementById('modal_photo_caption').value = '';
+        new bootstrap.Modal(document.getElementById('addUrlPhotoModal')).show();
+    }
+
+    function confirmAddUrlPhoto() {
+        const urlInput = document.getElementById('modal_photo_url');
+        const url = urlInput.value.trim();
+        if (!url) {
+            urlInput.focus();
+            return;
+        }
+
+        const title = document.getElementById('modal_photo_title').value.trim();
+        const caption = document.getElementById('modal_photo_caption').value.trim();
+
+        const container = document.getElementById('pending_urls_container');
+        const id = 'url_card_' + Date.now();
+
+        const col = document.createElement('div');
+        col.className = 'col-sm-6 col-md-4 col-xl-3';
+        col.id = id;
+        col.innerHTML = `
+            <div class="card h-100 bg-dark border-gold overflow-hidden shadow" style="border: 1px solid var(--primary) !important; border-radius: 14px;">
+                <div class="position-relative ratio ratio-1x1">
+                    <img src="${url}" class="object-fit-cover w-100 h-100" onerror="this.src='https://placehold.co/400x400/222/D4AF37?text=Invalid+Image+URL'" alt="URL Preview">
+                    <span class="badge bg-gold text-dark fw-bold position-absolute top-0 start-0 m-2 shadow-sm" style="font-size:0.65rem;">NEW (URL)</span>
+                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('${id}').remove(); updateGalleryStatus();" title="Remove photo">
+                        &times;
+                    </button>
+                </div>
+                <div class="p-3">
+                    <input type="hidden" name="gallery_urls[]" value="${url}">
+                    <label class="small text-muted mb-1" style="font-size:0.75rem;">Photo Title</label>
+                    <input type="text" name="gallery_url_titles[]" class="form-control form-control-sm bg-input border-secondary text-white mb-2" placeholder="Title (e.g. Hair Tattoo)" value="${title}">
+                    <label class="small text-muted mb-1" style="font-size:0.75rem;">Caption (optional)</label>
+                    <input type="text" name="gallery_url_captions[]" class="form-control form-control-sm bg-input border-secondary text-white" placeholder="Caption (optional)" value="${caption}">
+                </div>
+            </div>
+        `;
+        container.appendChild(col);
+
+        bootstrap.Modal.getInstance(document.getElementById('addUrlPhotoModal')).hide();
+        updateGalleryStatus();
+    }
+
+    // ─── Mark Existing Item for Deletion ───
     function markItemForDeletion(id) {
         if (confirm('Are you sure you want to remove this portfolio piece?')) {
             const bin = document.getElementById('hidden-portfolio-deletions');
@@ -253,31 +509,110 @@ render_staff_layout_start($page, 'My Portfolio');
 
             const card = document.getElementById('portfolio-item-card-' + id);
             if (card) {
-                card.style.display = 'none';
+                card.remove();
+            }
+            updateGalleryStatus();
+        }
+    }
+
+    // ─── Update Visual State and Counter ───
+    function updateGalleryStatus() {
+        const pendingFileCount = pendingGalleryFiles.length;
+        const pendingUrlCount = document.querySelectorAll('#pending_urls_container > div').length;
+        const totalPending = pendingFileCount + pendingUrlCount;
+
+        const existingCount = document.querySelectorAll('.existing-item-card').length;
+        const totalTotal = totalPending + existingCount;
+
+        const banner = document.getElementById('pending_alert_banner');
+        const countBadge = document.getElementById('pending_alert_count');
+        const emptyState = document.getElementById('empty_gallery_state');
+
+        if (totalPending > 0) {
+            banner.style.display = 'flex';
+            countBadge.textContent = totalPending + ' New Photo' + (totalPending > 1 ? 's' : '') + ' Ready';
+        } else {
+            banner.style.display = 'none';
+        }
+
+        if (totalTotal === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+        }
+    }
+
+    function submitPortfolioForm() {
+        const form = document.getElementById('portfolioForm');
+        if (form) {
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.submit();
             }
         }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Setup remove buttons for legacy portfolio images
         const removeBtns = document.querySelectorAll('.remove-gallery-btn');
         const hiddenBin = document.getElementById('hidden-removals');
 
         removeBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const card = this.closest('.gallery-item-card');
                 const url = card.getAttribute('data-url');
                 
-                // Add hidden input to tell controller to remove it
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'remove_gallery[]';
                 input.value = url;
                 hiddenBin.appendChild(input);
 
-                // Hide the card
-                card.style.display = 'none';
+                card.remove();
+                updateGalleryStatus();
             });
         });
+
+        // Setup Drag & Drop on Empty State Area
+        const dropzone = document.getElementById('empty_gallery_state');
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('drag-over');
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    addFilesToQueue(dt.files);
+                }
+            }, false);
+        }
+
+        // Form submit loading state
+        const form = document.getElementById('portfolioForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                const btn = document.getElementById('btnSavePortfolio');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> SAVING CHANGES...';
+                }
+            });
+        }
     });
 </script>
 

@@ -124,8 +124,16 @@ function render_staff_layout_start($page, $title = '') {
                             <p class="small mb-0 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px; color: var(--muted-foreground);"><?= auth()->user()->role ?? 'Staff' ?></p>
                         </div>
                         <div class="avatar-box" style="padding: 0; width: 38px; height: 38px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--primary); flex-shrink: 0;">
-                            <?php if(auth()->user()->profile_picture): ?>
-                                <img src="<?= asset('storage/' . auth()->user()->profile_picture) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            <?php 
+                                $userPic = auth()->user()->profile_picture;
+                                if (!$userPic && class_exists('\App\Models\Artist')) {
+                                    $linkedArtist = \App\Models\Artist::where('user_id', auth()->id())->orWhere('email', auth()->user()->email)->first();
+                                    $userPic = $linkedArtist ? ($linkedArtist->profile_photo ?: $linkedArtist->image_url) : null;
+                                }
+                                $picUrl = $userPic ? (\Illuminate\Support\Str::startsWith($userPic, 'http') ? $userPic : asset('storage/' . $userPic)) : null;
+                            ?>
+                            <?php if($picUrl): ?>
+                                <img src="<?= $picUrl ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                             <?php else: ?>
                                 <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #000; font-weight: 800; font-size: 1rem;">
                                     <?= strtoupper(substr(auth()->user()->name ?? 'S', 0, 1)) ?>

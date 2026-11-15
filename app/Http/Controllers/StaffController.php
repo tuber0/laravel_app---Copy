@@ -396,10 +396,14 @@ class StaffController extends Controller
             'social_instagram' => 'nullable|string|max:255',
             'social_facebook' => 'nullable|string|max:255',
             'preferred_styles' => 'nullable|string',
-            'primary_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:20480', // 20MB Max
-            'gallery_images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:20480',
+            'primary_image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:20480', // 20MB Max
+            'primary_image_url' => 'nullable|string',
+            'gallery_images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:20480',
             'gallery_titles.*' => 'nullable|string|max:255',
             'gallery_captions.*' => 'nullable|string|max:500',
+            'gallery_urls.*' => 'nullable|string',
+            'gallery_url_titles.*' => 'nullable|string|max:255',
+            'gallery_url_captions.*' => 'nullable|string|max:500',
             'remove_gallery' => 'nullable|array',
             'delete_portfolio_items' => 'nullable|array',
         ]);
@@ -420,7 +424,7 @@ class StaffController extends Controller
             return array_values(array_filter(array_map('trim', explode(',', $input))));
         };
 
-        // Handle Primary Image Upload
+        // Handle Primary Image Upload or URL
         if ($request->hasFile('primary_image')) {
             if ($artist->image_url && !\Illuminate\Support\Str::startsWith($artist->image_url, 'http')) {
                 if (\Illuminate\Support\Facades\Storage::disk('public')->exists($artist->image_url)) {
@@ -428,10 +432,13 @@ class StaffController extends Controller
                 }
             }
             $file = $request->file('primary_image');
-            $filename = time() . '_primary_' . $file->getClientOriginalName();
+            $filename = time() . '_primary_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
             $path = $file->storeAs('artists_portfolio', $filename, 'public');
             $artist->image_url = $path;
             $artist->profile_photo = $path;
+        } elseif ($request->filled('primary_image_url')) {
+            $artist->image_url = trim($request->input('primary_image_url'));
+            $artist->profile_photo = trim($request->input('primary_image_url'));
         }
 
         // Handle Deleting Existing PortfolioItems
@@ -473,19 +480,45 @@ class StaffController extends Controller
             $currentMaxOrder = (int) \App\Models\PortfolioItem::where('artist_id', $artist->id)->max('sort_order');
 
             foreach ($request->file('gallery_images') as $idx => $galleryFile) {
-                $filename = time() . '_' . uniqid() . '_' . $galleryFile->getClientOriginalName();
-                $path = $galleryFile->storeAs('artists_portfolio', $filename, 'public');
-                $portfolioArray[] = $path;
+                if ($galleryFile && $galleryFile->isValid()) {
+                    $filename = time() . '_' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $galleryFile->getClientOriginalName());
+                    $path = $galleryFile->storeAs('artists_portfolio', $filename, 'public');
+                    $portfolioArray[] = $path;
 
-                \App\Models\PortfolioItem::create([
-                    'artist_id' => $artist->id,
-                    'staff_artist_id' => $artist->id,
-                    'image_path' => $path,
-                    'title' => $galleryTitles[$idx] ?? ($artist->name . ' Work #' . ($idx + 1)),
-                    'category' => $artist->category,
-                    'caption' => $galleryCaptions[$idx] ?? null,
-                    'sort_order' => $currentMaxOrder + $idx + 1,
-                ]);
+                    \App\Models\PortfolioItem::create([
+                        'artist_id' => $artist->id,
+                        'staff_artist_id' => $artist->id,
+                        'image_path' => $path,
+                        'title' => $galleryTitles[$idx] ?? ($artist->name . ' Work #' . ($currentMaxOrder + $idx + 1)),
+                        'category' => $artist->category,
+                        'caption' => $galleryCaptions[$idx] ?? null,
+                        'sort_order' => $currentMaxOrder + $idx + 1,
+                    ]);
+                }
+            }
+        }
+
+        // 3. Add any gallery items added via URL
+        if ($request->filled('gallery_urls')) {
+            $galleryUrls = (array) $request->input('gallery_urls', []);
+            $urlTitles = (array) $request->input('gallery_url_titles', []);
+            $urlCaptions = (array) $request->input('gallery_url_captions', []);
+            $currentMaxOrder = (int) \App\Models\PortfolioItem::where('artist_id', $artist->id)->max('sort_order');
+
+            foreach ($galleryUrls as $idx => $url) {
+                $trimmedUrl = trim($url);
+                if ($trimmedUrl !== '') {
+                    $portfolioArray[] = $trimmedUrl;
+                    \App\Models\PortfolioItem::create([
+                        'artist_id' => $artist->id,
+                        'staff_artist_id' => $artist->id,
+                        'image_path' => $trimmedUrl,
+                        'title' => $urlTitles[$idx] ?? ($artist->name . ' Work #' . ($currentMaxOrder + $idx + 1)),
+                        'category' => $artist->category,
+                        'caption' => $urlCaptions[$idx] ?? null,
+                        'sort_order' => $currentMaxOrder + $idx + 1,
+                    ]);
+                }
             }
         }
 
@@ -540,6 +573,23 @@ class StaffController extends Controller
         $user->email = $validated['email'];
         $user->phone = $validated['phone'] ?? $user->phone;
         $user->save();
+
+        // Sync changes with linked Artist roster profile
+        $artist = \App\Models\Artist::where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+            ->first();
+        if ($artist) {
+            if ($request->hasFile('profile_picture') && $user->profile_picture) {
+                $artist->image_url = $user->profile_picture;
+                $artist->profile_photo = $user->profile_picture;
+            }
+            $artist->name = $user->name;
+            $artist->email = $user->email;
+            if ($user->phone) {
+                $artist->phone = $user->phone;
+            }
+            $artist->save();
+        }
 
         return back()->with('success', 'Staff profile updated successfully!');
     }
