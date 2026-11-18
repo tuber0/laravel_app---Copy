@@ -1,2 +1,6 @@
 *
 !.gitignore
+!artists_portfolio/
+!artists_portfolio/**
+!profiles/
+!profiles/**
