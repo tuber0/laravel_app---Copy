@@ -132,7 +132,15 @@ render_customer_layout_start($page, $artist->name . "'s Portfolio");
         ?>
         <?php if($hasItems): ?>
             <?php foreach ($artist->portfolioItems as $pItem): ?>
-                <?php $resolvedImg = \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : asset('storage/' . $pItem->image_path); ?>
+                <?php 
+                    if (\Illuminate\Support\Str::startsWith($pItem->image_path, 'http')) {
+                        $resolvedImg = $pItem->image_path;
+                    } else {
+                        $fp = storage_path('app/public/' . $pItem->image_path);
+                        $v = file_exists($fp) ? filemtime($fp) : time();
+                        $resolvedImg = asset('storage/' . $pItem->image_path) . '?v=' . $v;
+                    }
+                ?>
                 <div class="col-sm-6 col-md-4 col-xl-3">
                     <div class="portfolio-item-wrapper h-100 glass-card" style="overflow: hidden; border-radius: 14px; border: 1px solid var(--border); transition: transform 0.3s ease;">
                         <div style="position:relative; aspect-ratio: 1/1; overflow:hidden;">
@@ -154,7 +162,15 @@ render_customer_layout_start($page, $artist->name . "'s Portfolio");
             <?php endforeach; ?>
         <?php elseif (!empty($legacyImages)): ?>
             <?php foreach ($legacyImages as $img): ?>
-                <?php $resolvedImg = \Illuminate\Support\Str::startsWith($img, 'http') ? $img : asset('storage/' . $img); ?>
+                <?php 
+                    if (\Illuminate\Support\Str::startsWith($img, 'http')) {
+                        $resolvedImg = $img;
+                    } else {
+                        $fp = storage_path('app/public/' . $img);
+                        $v = file_exists($fp) ? filemtime($fp) : time();
+                        $resolvedImg = asset('storage/' . $img) . '?v=' . $v;
+                    }
+                ?>
                 <div class="col-sm-6 col-md-4 col-xl-3">
                     <div class="portfolio-item-wrapper glass-card overflow-hidden" style="border-radius: 12px; border: 1px solid var(--border);">
                         <img src="<?= $resolvedImg ?>" class="img-fluid w-100 portfolio-img" alt="Portfolio Image" style="aspect-ratio: 1/1; object-fit: cover; transition: transform 0.4s ease; cursor: zoom-in;" onclick="window.open('<?= $resolvedImg ?>', '_blank')">

@@ -79,7 +79,12 @@ render_staff_layout_start($page, 'My Portfolio');
                                         $photoPath = $artist->profile_photo ?: $artist->image_url;
                                     @endphp
                                     @if($photoPath)
-                                        <img id="primary_preview" src="{{ \Illuminate\Support\Str::startsWith($photoPath, 'http') ? $photoPath : asset('storage/' . $photoPath) }}" alt="Profile Image" class="img-fluid rounded-circle object-fit-cover w-100 h-100 shadow" style="background: var(--input)">
+                                        @php
+                                            $fp = storage_path('app/public/' . $photoPath);
+                                            $v = file_exists($fp) ? filemtime($fp) : time();
+                                            $previewSrc = \Illuminate\Support\Str::startsWith($photoPath, 'http') ? $photoPath : (asset('storage/' . $photoPath) . '?v=' . $v);
+                                        @endphp
+                                        <img id="primary_preview" src="{{ $previewSrc }}" alt="Profile Image" class="img-fluid rounded-circle object-fit-cover w-100 h-100 shadow" style="background: var(--input)">
                                         <div id="primary_preview_placeholder" class="rounded-circle bg-muted d-none align-items-center justify-content-center w-100 h-100">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" style="width:64px; color:var(--muted-foreground)"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
                                         </div>
@@ -213,7 +218,12 @@ render_staff_layout_start($page, 'My Portfolio');
                                     <div class="card h-100 bg-dark border-secondary overflow-hidden shadow-sm" style="border-radius: 14px;">
                                         <div class="position-relative overflow-hidden" style="border-radius: 14px 14px 0 0;">
                                             <div class="ratio ratio-1x1 bg-black">
-                                                <img src="{{ \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : asset('storage/' . $pItem->image_path) }}" class="object-fit-cover w-100 h-100" alt="{{ $pItem->title }}">
+                                                @php
+                                                    $itemFp = storage_path('app/public/' . $pItem->image_path);
+                                                    $itemV = file_exists($itemFp) ? filemtime($itemFp) : time();
+                                                    $itemImgSrc = \Illuminate\Support\Str::startsWith($pItem->image_path, 'http') ? $pItem->image_path : (asset('storage/' . $pItem->image_path) . '?v=' . $itemV);
+                                                @endphp
+                                                <img src="{{ $itemImgSrc }}" class="object-fit-cover w-100 h-100" alt="{{ $pItem->title }}">
                                             </div>
                                             <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow" style="width:28px;height:28px; display:flex; align-items:center; justify-content:center; z-index: 10; font-size: 16px; line-height: 1;" onclick="markItemForDeletion({{ $pItem->id }})" title="Remove photo">
                                                 &times;
@@ -230,7 +240,13 @@ render_staff_layout_start($page, 'My Portfolio');
                                 @foreach($artist->portfolio_images as $index => $img)
                                 <div class="col-6 col-sm-4 col-md-3 col-xl-2 gallery-item-card existing-item-card" data-url="{{ trim($img) }}">
                                     <div class="position-relative ratio ratio-1x1 rounded-4 overflow-hidden shadow-sm" style="border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s ease;">
-                                        <img src="{{ \Illuminate\Support\Str::startsWith(trim($img), 'http') ? trim($img) : asset('storage/' . trim($img)) }}" class="object-fit-cover w-100 h-100" alt="Portfolio Image">
+                                        @php
+                                            $cleanImg = trim($img);
+                                            $imgFp = storage_path('app/public/' . $cleanImg);
+                                            $imgV = file_exists($imgFp) ? filemtime($imgFp) : time();
+                                            $imgSrc = \Illuminate\Support\Str::startsWith($cleanImg, 'http') ? $cleanImg : (asset('storage/' . $cleanImg) . '?v=' . $imgV);
+                                        @endphp
+                                        <img src="{{ $imgSrc }}" class="object-fit-cover w-100 h-100" alt="Portfolio Image">
                                         <div class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-black bg-opacity-60 overlay-action opacity-0 hover-opacity-100 transition" style="top:0; left:0; backdrop-filter: blur(2px);">
                                             <button type="button" class="btn btn-sm btn-danger fw-bold rounded-pill px-4 remove-gallery-btn" style="font-size: 0.7rem; letter-spacing: 1px;">
                                                 REMOVE

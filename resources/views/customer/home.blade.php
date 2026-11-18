@@ -216,7 +216,7 @@ if ($activeAppointment) {
     <?php
     $displayCats = [
       ['name' => 'Barbering', 'category' => 'Barbering', 'icon' => '💈', 'img' => 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80'],
-      ['name' => 'Tattoo Art', 'category' => 'Tattoo Art', 'icon' => '🖋️', 'img' => 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400&q=80'],
+      ['name' => 'Tattoo Art', 'category' => 'Tattoo',    'icon' => '🖋️', 'img' => 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400&q=80'],
     ];
     foreach($displayCats as $cat): 
       $images = $categoryImages->get($cat['category']) ?: collect();
@@ -227,7 +227,16 @@ if ($activeAppointment) {
           <img src="<?= $cat['img'] ?>" class="specialty-default-img" alt="Default">
           <div class="specialty-slideshow">
             <?php foreach($images as $idx => $img): ?>
-              <img src="<?= asset('storage/'.$img) ?>" class="slide <?= $idx === 0 ? 'active' : '' ?>" alt="Sample work">
+              <?php 
+                if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                    $imgSrc = $img;
+                } else {
+                    $filePath = storage_path('app/public/' . $img);
+                    $v = file_exists($filePath) ? filemtime($filePath) : time();
+                    $imgSrc = asset('storage/' . $img) . '?v=' . $v;
+                }
+              ?>
+              <img src="<?= $imgSrc ?>" class="slide <?= $idx === 0 ? 'active' : '' ?>" alt="Sample work" onerror="this.remove()">
             <?php endforeach; ?>
           </div>
           <div class="specialty-label">
@@ -360,5 +369,38 @@ function confirmCancel(id) {
         console.error('Error:', error);
         alert('An error occurred. Please try again.');
     });
+}
+
+// Specialty Card Slideshow
+let specialtyIntervals = new Map();
+
+function startSlideshow(card) {
+    const slides = card.querySelectorAll('.specialty-slideshow .slide');
+    if (slides.length <= 1) return;
+
+    if (specialtyIntervals.has(card)) {
+        clearInterval(specialtyIntervals.get(card));
+    }
+
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+        slides[currentIdx].classList.remove('active');
+        currentIdx = (currentIdx + 1) % slides.length;
+        slides[currentIdx].classList.add('active');
+    }, 2000);
+    
+    specialtyIntervals.set(card, interval);
+}
+
+function stopSlideshow(card) {
+    const interval = specialtyIntervals.get(card);
+    if (interval) {
+        clearInterval(interval);
+        specialtyIntervals.delete(card);
+        
+        // Reset to first slide
+        const slides = card.querySelectorAll('.specialty-slideshow .slide');
+        slides.forEach((s, idx) => s.classList.toggle('active', idx === 0));
+    }
 }
 </script>

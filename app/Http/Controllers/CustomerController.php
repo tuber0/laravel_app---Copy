@@ -30,9 +30,21 @@ class CustomerController extends Controller
             
         $popularServices = Service::take(3)->get();
         
-        // Fetch portfolio images for each category to show in hover
-        $categoryImages = Artist::all()->groupBy('category')->map(function($artists) {
-            return $artists->pluck('portfolio_images')->flatten()->filter()->take(5)->values();
+        // Fetch portfolio images for each category to show in hover (from portfolio_items + legacy fallback)
+        $allArtists = Artist::with(['portfolioItems' => function($q) {
+            $q->orderBy('sort_order')->orderBy('id');
+        }])->get();
+        $categoryImages = $allArtists->groupBy('category')->map(function($catArtists) {
+            $images = collect();
+            foreach ($catArtists as $artist) {
+                if ($artist->portfolioItems && $artist->portfolioItems->count() > 0) {
+                    $images = $images->concat($artist->portfolioItems->pluck('image_path'));
+                } else {
+                    $images = $images->concat(collect($artist->portfolio_images ?? []));
+                }
+                if ($images->count() >= 5) break;
+            }
+            return $images->filter()->take(5)->values();
         });
             
         return view('customer.home', compact('user', 'activeAppointment', 'upcomingCount', 'totalCount', 'popularServices', 'categoryImages'));

@@ -8,14 +8,7 @@
   <link rel="stylesheet" href="{{ asset('assets/css/theme.css') }}?v={{ filemtime(public_path('assets/css/theme.css')) }}">
 
   <style>
-    .service-card-landing { transition: all 0.4s ease; cursor: pointer; }
-    .service-slideshow { position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s ease; z-index: 1; }
-    .service-card-landing:hover .service-slideshow { opacity: 1; }
-    .service-card-landing:hover .service-content { transform: translateY(-5px); z-index: 2; position: relative; }
-    .service-content { transition: all 0.4s ease; background: rgba(11,11,11,0.2); height: 100%; padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; backdrop-filter: blur(1px); }
-    .service-card-landing:hover .service-content { background: rgba(11,11,11,0.4); }
-    .service-slideshow .slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; }
-    .service-slideshow .slide.active { opacity: 1; }
+    .service-card-landing { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -120,30 +113,23 @@
     <div class="row g-4">
       <?php
       $services = [
-        ['icon' => '💈', 'name' => 'Barbering',     'category' => 'Barbering',   'desc' => 'Classic cuts, fades, beard trims & hot towel shaves by master barbers.'],
+        ['icon' => '💈', 'name' => 'Barbering',     'category' => 'Barbering',    'desc' => 'Classic cuts, fades, beard trims & hot towel shaves by master barbers.'],
         ['icon' => '🪢', 'name' => 'Braiding',       'category' => 'Hair Styling', 'desc' => 'Box braids, cornrows, twists & protective styles by expert braiders.'],
-        ['icon' => '🖋️', 'name' => 'Tattoo',         'category' => 'Tattoo Art',  'desc' => 'Custom designs, realism, black & grey by award-winning artists.'],
+        ['icon' => '🖋️', 'name' => 'Tattoo',         'category' => 'Tattoo',       'desc' => 'Custom designs, realism, black & grey by award-winning artists.'],
         ['icon' => '💎', 'name' => 'Piercing',        'category' => 'Piercing',    'desc' => 'Ear, nose & body piercings with certified professionals.'],
-        ['icon' => '🧢', 'name' => 'Cap Cleaning',   'category' => 'Other',       'desc' => 'Deep clean & restoration for your favorite caps and sneakers.'],
+        ['icon' => '🧢', 'name' => 'Cap Cleaning',   'category' => 'Others',       'desc' => 'Deep clean & restoration for your favorite caps and sneakers.'],
       ];
       foreach ($services as $s): 
-        $images = $categoryImages->get($s['category']) ?: collect();
       ?>
       <div class="col-6 col-md-4 col-lg">
-        <div class="service-card-landing h-100 position-relative overflow-hidden" onmouseenter="startSlideshow(this)" onmouseleave="stopSlideshow(this)">
-          <div class="service-slideshow">
-            <?php foreach($images as $idx => $img): ?>
-              <img src="<?= asset('storage/'.$img) ?>" class="slide <?= $idx === 0 ? 'active' : '' ?>" alt="Work sample">
-            <?php endforeach; ?>
-            <?php if($images->isEmpty()): ?>
-              <div class="slide active d-flex align-items-center justify-content-center bg-dark" style="font-size:2rem;opacity:0.3"><?= $s['icon'] ?></div>
-            <?php endif; ?>
-          </div>
-          <div class="service-content">
+        <div class="service-card-landing h-100 d-flex flex-column justify-content-between">
+          <div>
             <div class="service-icon"><?= $s['icon'] ?></div>
             <h5 style="font-family:var(--font-bebas);font-size:1.3rem;letter-spacing:0.05em;color:var(--primary)"><?= $s['name'] ?></h5>
             <p style="color:var(--muted-foreground);font-size:0.85rem;font-family:var(--font-montserrat)"><?= $s['desc'] ?></p>
-            <a href="{{ route('customer.book') }}" class="btn btn-gold btn-sm mt-2">Book Now</a>
+          </div>
+          <div>
+            <a href="{{ route('customer.book') }}" class="btn btn-gold btn-sm mt-3">Book Now</a>
           </div>
         </div>
       </div>
@@ -291,34 +277,5 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-let slideshowIntervals = new Map();
-
-function startSlideshow(card) {
-    const slides = card.querySelectorAll('.service-slideshow .slide');
-    if (slides.length <= 1) return;
-
-    let currentIdx = 0;
-    const interval = setInterval(() => {
-        slides[currentIdx].classList.remove('active');
-        currentIdx = (currentIdx + 1) % slides.length;
-        slides[currentIdx].classList.add('active');
-    }, 2000);
-    
-    slideshowIntervals.set(card, interval);
-}
-
-function stopSlideshow(card) {
-    const interval = slideshowIntervals.get(card);
-    if (interval) {
-        clearInterval(interval);
-        slideshowIntervals.delete(card);
-        
-        // Reset to first slide
-        const slides = card.querySelectorAll('.service-slideshow .slide');
-        slides.forEach((s, idx) => s.classList.toggle('active', idx === 0));
-    }
-}
-</script>
 </body>
 </html>

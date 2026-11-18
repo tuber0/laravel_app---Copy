@@ -49,33 +49,33 @@ render_admin_layout_start($page, 'Appointment Management');
         </div>
         <div class="row g-3">
             @foreach($artists as $art)
-            <div class="col-md-6 col-xl-4" id="artistCard_{{ $art->id }}">
+            <div class="col-md-6 col-xl-4 artist-status-col" id="artistCard_{{ $art->id }}">
                 <div class="glass-card p-3 d-flex align-items-center justify-content-between border border-secondary" style="border-radius: 16px; background: rgba(20, 20, 20, 0.75);">
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3 me-2" style="min-width: 0; flex: 1;">
                         <img src="{{ $art->profile_photo ? (Str::startsWith($art->profile_photo, 'http') ? $art->profile_photo : asset('storage/' . $art->profile_photo)) : ($art->image_url ? (Str::startsWith($art->image_url, 'http') ? $art->image_url : asset('storage/' . $art->image_url)) : 'https://ui-avatars.com/api/?name=' . urlencode($art->name) . '&background=D4AF37&color=0B0B0B') }}" 
                              alt="{{ $art->name }}" 
-                             class="rounded-circle border border-secondary" 
-                             style="width: 48px; height: 48px; object-fit: cover;">
-                        <div>
-                            <div class="fw-bold text-white mb-0" style="font-size: 0.95rem;">{{ $art->name }}</div>
-                            <div class="text-muted small" style="font-size: 0.75rem;">{{ $art->category }}</div>
-                            <div class="small mt-1 text-muted" style="font-size: 0.75rem;">
+                             class="rounded-circle border border-secondary flex-shrink-0" 
+                             style="width: 48px; height: 48px; min-width: 48px; min-height: 48px; object-fit: cover;">
+                        <div style="min-width: 0;">
+                            <div class="fw-bold text-white mb-0 text-truncate" style="font-size: 0.95rem; white-space: nowrap;" title="{{ $art->name }}">{{ $art->name }}</div>
+                            <div class="text-muted small text-truncate" style="font-size: 0.75rem;">{{ $art->category }}</div>
+                            <div class="small mt-1 text-muted text-nowrap" style="font-size: 0.75rem;">
                                 Queue: <strong class="text-white queue-count-badge" data-artist-id="{{ $art->id }}">{{ $art->activeQueue->count() }}</strong> (est. <span class="queue-wait-badge" data-artist-id="{{ $art->id }}">~{{ $art->estimated_wait_minutes }}m</span>)
                             </div>
                         </div>
                     </div>
 
                     <!-- Admin Status Selector -->
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-dark border border-secondary rounded-pill px-3 py-1 dropdown-toggle d-flex align-items-center gap-2 status-btn-{{ $art->id }}" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" data-bs-boundary="viewport">
+                    <div class="dropdown flex-shrink-0 ms-auto">
+                        <button class="btn btn-sm btn-dark border border-secondary rounded-pill px-3 py-1 dropdown-toggle d-flex align-items-center gap-2 status-btn-{{ $art->id }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="white-space: nowrap;">
                             <span class="status-pulse-dot {{ $art->live_status ?? 'available' }}"></span>
                             <span class="small fw-bold text-uppercase" style="font-size: 0.7rem;">{{ strtoupper(str_replace('_', ' ', $art->live_status ?? 'available')) }}</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" style="background:#181818; border-color:#333; z-index:9999;">
-                            <li><button class="dropdown-item py-2 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'available')"><span class="status-pulse-dot available"></span> Available</button></li>
-                            <li><button class="dropdown-item py-2 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'busy')"><span class="status-pulse-dot busy"></span> Busy</button></li>
-                            <li><button class="dropdown-item py-2 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'on_break')"><span class="status-pulse-dot on_break"></span> On Break</button></li>
-                            <li><button class="dropdown-item py-2 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'off')"><span class="status-pulse-dot off"></span> Off Duty</button></li>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="background:#181818; border-color:#333; min-width: 150px; z-index: 1060; border-radius: 12px; padding: 6px 0;">
+                            <li><button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'available')"><span class="status-pulse-dot available"></span> Available</button></li>
+                            <li><button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'busy')"><span class="status-pulse-dot busy"></span> Busy</button></li>
+                            <li><button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'on_break')"><span class="status-pulse-dot on_break"></span> On Break</button></li>
+                            <li><button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 small" onclick="adminSetArtistStatus({{ $art->id }}, 'off')"><span class="status-pulse-dot off"></span> Off Duty</button></li>
                         </ul>
                     </div>
                 </div>
@@ -502,6 +502,26 @@ render_admin_layout_start($page, 'Appointment Management');
     .status-pulse-dot.on_break { background-color: #ffc107; box-shadow: 0 0 8px rgba(255, 193, 7, 0.8); }
     .status-pulse-dot.off { background-color: #6c757d; }
 
+    /* Staff Live Status Card & Dropdown Stacking */
+    .artist-status-col {
+        position: relative;
+        z-index: 1;
+        transition: z-index 0.2s ease;
+    }
+    .artist-status-col:hover,
+    .artist-status-col:focus-within,
+    .artist-status-col.is-active,
+    .artist-status-col:has(.dropdown.show),
+    .artist-status-col:has(.dropdown-menu.show) {
+        z-index: 1060 !important;
+    }
+    .artist-status-col.is-active .glass-card,
+    .artist-status-col:has(.dropdown.show) .glass-card,
+    .artist-status-col:has(.dropdown-menu.show) .glass-card {
+        z-index: 1060 !important;
+        transform: none !important;
+    }
+
     /* FullCalendar Overrides */
     .fc-header-toolbar { margin-bottom: 2rem !important; }
     .fc-toolbar-title { font-family: var(--font-montserrat); font-weight: 800; color: var(--primary) !important; font-size: 1.5rem !important; text-transform: uppercase; }
@@ -797,15 +817,44 @@ render_admin_layout_start($page, 'Appointment Management');
         setInterval(fetchAdminQueueData, 8000);
     }
 
-    // Ensure dropdowns rendered inside fixed-strategy escape overflow clipping
+    // Ensure dropdowns in artist status cards float over subsequent rows and cards,
+    // and dropdowns rendered inside fixed-strategy escape overflow clipping
     document.addEventListener('show.bs.dropdown', function (e) {
-        const menu = e.target.nextElementSibling;
-        if (menu && menu.classList.contains('dropdown-menu')) {
-            const rect = e.target.getBoundingClientRect();
-            menu.style.position  = 'fixed';
-            menu.style.top       = (rect.bottom + 4) + 'px';
-            menu.style.left      = Math.min(rect.left, window.innerWidth - 200) + 'px';
-            menu.style.zIndex    = '9999';
+        const col = e.target.closest('.artist-status-col');
+        if (col) {
+            col.style.zIndex = '1060';
+            col.classList.add('is-active');
+            const card = col.querySelector('.glass-card');
+            if (card) {
+                card.style.zIndex = '1060';
+                card.style.transform = 'none';
+            }
+            return;
+        }
+
+        const tableResponsive = e.target.closest('.table-responsive');
+        if (tableResponsive) {
+            const menu = e.target.nextElementSibling;
+            if (menu && menu.classList.contains('dropdown-menu')) {
+                const rect = e.target.getBoundingClientRect();
+                menu.style.position  = 'fixed';
+                menu.style.top       = (rect.bottom + 4) + 'px';
+                menu.style.left      = Math.min(rect.left, window.innerWidth - 200) + 'px';
+                menu.style.zIndex    = '9999';
+            }
+        }
+    });
+
+    document.addEventListener('hidden.bs.dropdown', function (e) {
+        const col = e.target.closest('.artist-status-col');
+        if (col) {
+            col.style.zIndex = '';
+            col.classList.remove('is-active');
+            const card = col.querySelector('.glass-card');
+            if (card) {
+                card.style.zIndex = '';
+                card.style.transform = '';
+            }
         }
     });
 

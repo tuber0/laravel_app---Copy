@@ -124,7 +124,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'lisa.c@artisan.shop',
                 'image_url' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80',
                 'portfolio_images' => [
-                    'https://images.unsplash.com/photo-1611930528536-482d46ed3021?w=500&q=80',
+                    'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?w=500&q=80',
                     'https://images.unsplash.com/photo-1540206351-d6465b3ac5c1?w=500&q=80'
                 ]
             ],

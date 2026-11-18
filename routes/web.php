@@ -10,9 +10,24 @@ Route::get('/', function () {
     $artists = \App\Models\Artist::withCount('reviews')->take(3)->get();
     $recentReviews = \App\Models\Review::with(['user', 'artist'])->latest()->take(3)->get();
     
-    // Fetch some portfolio images for each category to show in the service hover
-    $categoryImages = \App\Models\Artist::all()->groupBy('category')->map(function($artists) {
-        return $artists->pluck('portfolio_images')->flatten()->filter()->take(5)->values();
+    // Build category image map from portfolio_items (uploaded files + URLs) with fallback to portfolio_images JSON
+    $allArtists = \App\Models\Artist::with(['portfolioItems' => function($q) {
+        $q->orderBy('sort_order')->orderBy('id');
+    }])->get();
+
+    $categoryImages = $allArtists->groupBy('category')->map(function($artists) {
+        $images = collect();
+        foreach ($artists as $artist) {
+            // Prefer portfolio_items table (most up-to-date)
+            if ($artist->portfolioItems && $artist->portfolioItems->count() > 0) {
+                $images = $images->concat($artist->portfolioItems->pluck('image_path'));
+            } else {
+                // Fallback to legacy portfolio_images JSON
+                $images = $images->concat(collect($artist->portfolio_images ?? []));
+            }
+            if ($images->count() >= 5) break;
+        }
+        return $images->filter()->take(5)->values();
     });
 
     return view('public.index', compact('artists', 'recentReviews', 'categoryImages'));
@@ -24,6 +39,17 @@ Route::get('/csrf-token', function () {
         'token' => csrf_token(),
     ]);
 })->name('csrf.token');
+
+// Direct storage fallback route to guarantee image delivery across all local servers
+Route::get('/storage/{path}', function ($path) {
+    $fullPath = storage_path('app/public/' . $path);
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+    return response()->file($fullPath, [
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*');
 
 use App\Http\Controllers\Admin\ArtistController;
 
