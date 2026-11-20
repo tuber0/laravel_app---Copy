@@ -19,7 +19,7 @@ render_admin_layout_start($page, 'Sales History');
     </div>
 
     <!-- Stats Row -->
-    <div class="row g-4 mb-5">
+    <div class="row g-4 mb-4">
         <div class="col-md-4">
             <div class="glass-card p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -56,6 +56,61 @@ render_admin_layout_start($page, 'Sales History');
                 </div>
                 <div class="h3 fw-bold mb-1" style="color: var(--foreground);">{{ $payments->count() }}</div>
                 <div class="small fw-bold text-uppercase" style="color: var(--muted-foreground); letter-spacing: 0.5px;">Total Transactions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dropdown Filter Bar -->
+    <div class="glass-card p-3 mb-4">
+        <div class="row g-3 align-items-center">
+            <!-- Search Input -->
+            <div class="col-12 col-md-4 col-lg-3">
+                <div class="position-relative">
+                    <input type="text" id="salesSearchInput" class="form-control form-control-sm filter-control ps-4 pe-3" placeholder="Search ID, client, service..." oninput="applySalesFilters()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Date / Period Filter Dropdown -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <select id="salesPeriodFilter" class="form-select form-select-sm filter-control" onchange="applySalesFilters()">
+                    <option value="all">📅 All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">This Month</option>
+                    <option value="year">This Year</option>
+                </select>
+            </div>
+
+            <!-- Payment Method Filter Dropdown -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <select id="salesMethodFilter" class="form-select form-select-sm filter-control" onchange="applySalesFilters()">
+                    <option value="all">💳 All Methods</option>
+                    <option value="cash">Cash</option>
+                    <option value="online">Online</option>
+                </select>
+            </div>
+
+            <!-- Status Filter Dropdown -->
+            <div class="col-6 col-md-2 col-lg-2">
+                <select id="salesStatusFilter" class="form-select form-select-sm filter-control" onchange="applySalesFilters()">
+                    <option value="all">🏷️ All Statuses</option>
+                    <option value="completed">Paid</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </div>
+
+            <!-- Actions & Results Count Badge -->
+            <div class="col-6 col-md-auto col-lg ms-auto d-flex align-items-center justify-content-end gap-2">
+                <button id="resetSalesFilterBtn" onclick="resetSalesFilters()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1" style="display: none; font-size: 0.75rem;">
+                    Clear Filter
+                </button>
+                <span id="filteredCountBadge" class="badge bg-gold-subtle text-gold px-3 py-2 rounded-pill small">
+                    Showing all {{ $payments->count() }} records
+                </span>
             </div>
         </div>
     </div>
@@ -121,8 +176,18 @@ render_admin_layout_start($page, 'Sales History');
 
                         $clientName = optional(optional($apt)->user)->name ?? ($apt->client_name ?? 'Walk-in Client');
                         $clientEmail = optional(optional($apt)->user)->email ?? '';
+                        $itemNames = array_column($items, 'name');
+                        $searchContent = strtolower(($payment->transaction_id ?? $payment->id) . ' ' . $clientName . ' ' . $clientEmail . ' ' . implode(' ', $itemNames) . ' ' . ($payment->appointment->artist->name ?? '') . ' ' . $payment->method);
                     ?>
-                    <tr onclick='showTransactionDetail(@json($txnData))' style="cursor: pointer;">
+                    <tr class="sales-row" 
+                        onclick='showTransactionDetail(@json($txnData))' 
+                        style="cursor: pointer;"
+                        data-date="{{ $payment->created_at->format('Y-m-d') }}"
+                        data-timestamp="{{ $payment->created_at->timestamp * 1000 }}"
+                        data-method="{{ strtolower($payment->method ?? '') }}"
+                        data-status="{{ strtolower($payment->status ?? '') }}"
+                        data-amount="{{ (float)$payment->amount }}"
+                        data-search="{{ $searchContent }}">
                         <td class="ps-4 py-3">
                             <span class="small fw-bold text-uppercase" style="color:var(--primary)">#{{ $payment->transaction_id ?? $payment->id }}</span>
                         </td>
@@ -159,6 +224,13 @@ render_admin_layout_start($page, 'Sales History');
                         </td>
                     </tr>
                     @endforelse
+                    <tr id="noFilterMatchRow" style="display: none;">
+                        <td colspan="7" class="py-5 text-center text-muted">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:36px;height:36px;margin-bottom:0.75rem;opacity:0.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                            <div>No transactions found matching your selected filters.</div>
+                            <button onclick="resetSalesFilters()" class="btn btn-outline-gold btn-sm rounded-pill mt-2 px-3 py-1" style="font-size:0.75rem">Clear Filters</button>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -277,9 +349,138 @@ render_admin_layout_start($page, 'Sales History');
         const modal = new bootstrap.Modal(document.getElementById('txnDetailModal'));
         modal.show();
     }
+
+    function applySalesFilters() {
+        const search = (document.getElementById('salesSearchInput')?.value || '').toLowerCase().trim();
+        const period = document.getElementById('salesPeriodFilter')?.value || 'all';
+        const method = document.getElementById('salesMethodFilter')?.value || 'all';
+        const status = document.getElementById('salesStatusFilter')?.value || 'all';
+
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        const yesterdayStr = `${yest.getFullYear()}-${pad(yest.getMonth() + 1)}-${pad(yest.getDate())}`;
+
+        const sevenDaysAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
+        const currentYearMonth = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+        const currentYear = `${now.getFullYear()}`;
+
+        const rows = document.querySelectorAll('.sales-row');
+        let visibleCount = 0;
+        let filteredTotal = 0;
+
+        rows.forEach(row => {
+            const rowDate = row.dataset.date || '';
+            const rowTimestamp = parseInt(row.dataset.timestamp || '0', 10);
+            const rowMethod = (row.dataset.method || '').toLowerCase();
+            const rowStatus = (row.dataset.status || '').toLowerCase();
+            const rowSearch = (row.dataset.search || '').toLowerCase();
+            const rowAmount = parseFloat(row.dataset.amount || '0');
+
+            // 1. Search Match
+            let matchSearch = true;
+            if (search) {
+                matchSearch = rowSearch.includes(search);
+            }
+
+            // 2. Period Match
+            let matchPeriod = true;
+            if (period === 'today') {
+                matchPeriod = (rowDate === todayStr);
+            } else if (period === 'yesterday') {
+                matchPeriod = (rowDate === yesterdayStr);
+            } else if (period === 'week') {
+                matchPeriod = (rowTimestamp >= sevenDaysAgo);
+            } else if (period === 'month') {
+                matchPeriod = rowDate.startsWith(currentYearMonth);
+            } else if (period === 'year') {
+                matchPeriod = rowDate.startsWith(currentYear);
+            }
+
+            // 3. Method Match
+            let matchMethod = true;
+            if (method !== 'all') {
+                if (method === 'online') {
+                    matchMethod = (rowMethod.includes('online') || rowMethod.includes('gcash') || rowMethod.includes('card'));
+                } else {
+                    matchMethod = (rowMethod === method);
+                }
+            }
+
+            // 4. Status Match
+            let matchStatus = true;
+            if (status !== 'all') {
+                if (status === 'completed') {
+                    matchStatus = (rowStatus === 'completed' || rowStatus === 'paid');
+                } else {
+                    matchStatus = (rowStatus === status);
+                }
+            }
+
+            if (matchSearch && matchPeriod && matchMethod && matchStatus) {
+                row.style.display = '';
+                visibleCount++;
+                filteredTotal += rowAmount;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Toggle Empty Row Indicator
+        const emptyRow = document.getElementById('noFilterMatchRow');
+        if (emptyRow) {
+            emptyRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+        }
+
+        // Toggle Reset Button & Update Results Badge
+        const isFiltered = (search !== '' || period !== 'all' || method !== 'all' || status !== 'all');
+        const resetBtn = document.getElementById('resetSalesFilterBtn');
+        if (resetBtn) {
+            resetBtn.style.display = isFiltered ? 'inline-flex' : 'none';
+        }
+
+        const countBadge = document.getElementById('filteredCountBadge');
+        if (countBadge) {
+            if (isFiltered) {
+                countBadge.innerHTML = `Showing <strong>${visibleCount}</strong> of ${rows.length} records <span class="ms-1 opacity-75">(₱${filteredTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})})</span>`;
+            } else {
+                countBadge.innerHTML = `Showing all <strong>${rows.length}</strong> records`;
+            }
+        }
+    }
+
+    function resetSalesFilters() {
+        if (document.getElementById('salesSearchInput')) document.getElementById('salesSearchInput').value = '';
+        if (document.getElementById('salesPeriodFilter')) document.getElementById('salesPeriodFilter').value = 'all';
+        if (document.getElementById('salesMethodFilter')) document.getElementById('salesMethodFilter').value = 'all';
+        if (document.getElementById('salesStatusFilter')) document.getElementById('salesStatusFilter').value = 'all';
+        applySalesFilters();
+    }
 </script>
 
 <style>
+    .filter-control {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--foreground) !important;
+        border-radius: 30px !important;
+        font-size: 0.8rem !important;
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        transition: all 0.2s ease;
+    }
+    .filter-control:focus {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
+        outline: none !important;
+    }
+    .filter-control option {
+        background: #141414;
+        color: #ffffff;
+    }
     .stat-icon-box {
         width: 42px; height: 42px;
         background: rgba(212, 175, 55, 0.1);
@@ -287,7 +488,6 @@ render_admin_layout_start($page, 'Sales History');
         border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
     }
-    
     .table-hover tbody tr:hover {
         background-color: rgba(212, 175, 55, 0.05) !important;
     }
