@@ -210,10 +210,10 @@
                         Keep me signed in
                     </label>
                 </div>
-                <a href="{{ route('password.request') }}" style="color: var(--primary); font-size: 0.8rem; font-family: var(--font-montserrat); text-decoration: none;">Forgot?</a>
+                <a href="{{ route('password.request') }}" style="color: var(--primary); font-size: 0.8rem; font-family: var(--font-montserrat); text-decoration: none;">Forgot Password?</a>
             </div>
 
-            <button type="submit" class="btn-login">Unlock Access</button>
+            <button type="submit" class="btn-login">Log In</button>
         </form>
 
         <div class="footer-links">
