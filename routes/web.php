@@ -64,8 +64,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('artists', ArtistController::class);
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
         Route::get('/payments/report/print', [PaymentController::class, 'print'])->name('payments.print');
+        Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
         
         // Admin Appointment Management
         Route::get('/appointments', [AdminAppointmentController::class, 'index'])->name('appointments.index');
