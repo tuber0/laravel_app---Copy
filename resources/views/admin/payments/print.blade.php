@@ -73,18 +73,40 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($payments as $payment)
+                @forelse($payments as $payment)
+                @php
+                    $apt = $payment->appointment;
+                    $clientName = optional(optional($apt)->user)->name ?? ($apt->client_name ?? 'Walk-in Client');
+                    
+                    $serviceName = optional(optional($apt)->service)->name;
+                    if (!$serviceName && !empty($payment->items)) {
+                        $itemNames = [];
+                        foreach ($payment->items as $item) {
+                            $qty = $item['qty'] ?? $item['quantity'] ?? 1;
+                            $name = $item['name'] ?? 'Item';
+                            $itemNames[] = $qty > 1 ? "$name (x$qty)" : $name;
+                        }
+                        $serviceName = implode(', ', $itemNames);
+                    }
+                    $serviceName = $serviceName ?: 'POS / Walk-in Sale';
+                    
+                    $artistName = optional(optional($apt)->artist)->name ?? 'N/A';
+                @endphp
                 <tr>
-                    <td>{{ $payment->created_at->format('Y-m-d') }}</td>
+                    <td>{{ $payment->created_at ? $payment->created_at->format('Y-m-d') : 'N/A' }}</td>
                     <td class="small font-monospace">{{ $payment->transaction_id ?: 'T-'.str_pad($payment->id, 8, '0', STR_PAD_LEFT) }}</td>
-                    <td>{{ $payment->appointment->client_name }}</td>
-                    <td>{{ $payment->appointment->service->name }}</td>
-                    <td>{{ $payment->appointment->artist->name ?? 'N/A' }}</td>
-                    <td class="text-capitalize">{{ $payment->method }}</td>
-                    <td class="text-capitalize">{{ $payment->status }}</td>
+                    <td>{{ $clientName }}</td>
+                    <td>{{ $serviceName }}</td>
+                    <td>{{ $artistName }}</td>
+                    <td class="text-capitalize">{{ $payment->method ?? 'Cash' }}</td>
+                    <td class="text-capitalize">{{ $payment->status ?? 'Completed' }}</td>
                     <td class="text-end fw-bold">₱{{ number_format($payment->amount, 2) }}</td>
                 </tr>
-                @endforeach
+                @empty
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">No payment records found.</td>
+                </tr>
+                @endforelse
             </tbody>
             <tfoot>
                 <tr class="table-light">

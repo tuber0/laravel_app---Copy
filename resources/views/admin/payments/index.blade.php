@@ -27,19 +27,19 @@ render_admin_layout_start($page, 'Transaction History');
         <div class="col-md-3">
             <div class="stat-card-simple border-border">
                 <span class="text-muted small text-uppercase fw-bold">Total Revenue</span>
-                <h2 class="fw-bold text-white mb-0 mt-1">₱0.00</h2>
+                <h2 class="fw-bold text-white mb-0 mt-1">₱{{ number_format($totalRevenue ?? 0, 2) }}</h2>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card-simple border-border">
                 <span class="text-muted small text-uppercase fw-bold">Comp. Payments</span>
-                <h2 class="fw-bold text-success mb-0 mt-1">0</h2>
+                <h2 class="fw-bold text-success mb-0 mt-1">{{ number_format($completedCount ?? 0) }}</h2>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card-simple border-border">
                 <span class="text-muted small text-uppercase fw-bold">Pending Amount</span>
-                <h2 class="fw-bold text-warning mb-0 mt-1">₱0.00</h2>
+                <h2 class="fw-bold text-warning mb-0 mt-1">₱{{ number_format($pendingAmount ?? 0, 2) }}</h2>
             </div>
         </div>
     </div>
@@ -62,27 +62,45 @@ render_admin_layout_start($page, 'Transaction History');
                 </thead>
                 <tbody>
                     @forelse($payments as $payment)
+                    @php
+                        $apt = $payment->appointment;
+                        $clientName = optional(optional($apt)->user)->name ?? ($apt->client_name ?? 'Walk-in Client');
+                        
+                        $serviceName = optional(optional($apt)->service)->name;
+                        if (!$serviceName && !empty($payment->items)) {
+                            $itemNames = [];
+                            foreach ($payment->items as $item) {
+                                $qty = $item['qty'] ?? $item['quantity'] ?? 1;
+                                $name = $item['name'] ?? 'Item';
+                                $itemNames[] = $qty > 1 ? "$name (x$qty)" : $name;
+                            }
+                            $serviceName = implode(', ', $itemNames);
+                        }
+                        $serviceName = $serviceName ?: 'POS / Walk-in Sale';
+                        
+                        $artistName = optional(optional($apt)->artist)->name ?? 'N/A';
+                    @endphp
                     <tr>
                         <td class="ps-4 font-mono small">{{ $payment->transaction_id ?: 'T-'.str_pad($payment->id, 8, '0', STR_PAD_LEFT) }}</td>
-                        <td>{{ $payment->created_at->format('M d, Y - h:i A') }}</td>
-                        <td>{{ $payment->appointment->client_name }}</td>
-                        <td>{{ $payment->appointment->service->name }}</td>
-                        <td>{{ $payment->appointment->artist->name ?? 'N/A' }}</td>
+                        <td>{{ $payment->created_at ? $payment->created_at->format('M d, Y - h:i A') : 'N/A' }}</td>
+                        <td>{{ $clientName }}</td>
+                        <td>{{ $serviceName }}</td>
+                        <td>{{ $artistName }}</td>
                         <td>
                             <span class="badge bg-dark-subtle border border-border text-capitalize px-2 py-1">
-                                {{ $payment->method }}
+                                {{ $payment->method ?? 'Cash' }}
                             </span>
                         </td>
                         <td class="fw-bold" style="color: var(--foreground)">₱{{ number_format($payment->amount, 2) }}</td>
                         <td>
-                            <span class="status-pill status-{{ $payment->status }}">
-                                {{ $payment->status }}
+                            <span class="status-pill status-{{ $payment->status ?? 'completed' }}">
+                                {{ $payment->status ?? 'Completed' }}
                             </span>
                         </td>
                         <td class="pe-4 text-end">
-                            <button class="btn btn-icon-sm" onclick="viewDetails({{ $payment->id }})">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                            </button>
+                            <a href="{{ route('admin.payments.print') }}" target="_blank" class="btn btn-icon-sm" title="Print Statement">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.89l-2.25 2.25m0 0l2.25 2.25m-2.25-2.25h16.5M6.75 6.75h10.5M6.75 10.5h10.5M6.75 14.25h10.5" /></svg>
+                            </a>
                         </td>
                     </tr>
                     @empty
